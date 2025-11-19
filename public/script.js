@@ -474,7 +474,7 @@
         // --- CONFIGURATION ---
         // --- CONFIGURATION ---
                 const CONFIG = {
-                    MAPTILER_PUBLIC_KEY: 'YOUR_PUBLIC_MAPTILER_KEY', // <-- ΑΝΤΙΚΑΤΑΣΤΗΣΕ ΤΟ ΜΕ ΤΟ ΔΗΜΟΣΙΟ ΚΛΕΙΔΙ ΣΟΥ
+                    MAPTILER_PUBLIC_KEY: 'u8zRQYN6M4dzdhc7tvka', // <-- ΑΝΤΙΚΑΤΑΣΤΗΣΕ ΤΟ ΜΕ ΤΟ ΔΗΜΟΣΙΟ ΚΛΕΙΔΙ ΣΟΥ
                     ELEVATION_API_URL: '/api/open-elevation/lookup', // Use proxy
                     MAX_PINS: 40, // Number of Pins
                     DEFAULT_CENTER: [39.663967, 20.852770], // Ioannina, Greece
