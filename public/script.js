@@ -1434,22 +1434,37 @@
             document.getElementById('roundTripToggle').addEventListener('change', handleRoundTripToggle);
             document.getElementById('steepUphillToggle').addEventListener('change', handleSteepUphillToggle);
 
-            window.addEventListener('resize', () => {
-                if (state.map) {
-                    setTimeout(() => state.map.resize(), 100);
-                }
-                if (state.elevationChart) {
-                    setTimeout(() => {
-                        state.elevationChart.resize();
-                    }, 150);
-                }
-            });
+                        window.addEventListener('resize', () => {
 
-            setupTooltips();
+                            if (state.map) {
 
-            // Event listener for the "Add Waypoint" button
-            document.getElementById('addWaypointBtn').addEventListener('click', () => {
-                if (rightClickLatLng && insertIndex !== -1) {
+                                setTimeout(() => state.map.resize(), 100);
+
+                            }
+
+                            if (state.elevationChart) {
+
+                                setTimeout(() => {
+
+                                    state.elevationChart.resize();
+
+                                }, 150);
+
+                            }
+
+                        });
+
+            
+
+                        // setupTooltips();
+
+            
+
+                        // Event listener for the "Add Waypoint" button
+
+                        document.getElementById('addWaypointBtn').addEventListener('click', () => {
+
+                            if (rightClickLatLng && insertIndex !== -1) {
                     addWaypoint(rightClickLatLng, insertIndex);
                     document.getElementById('contextMenu').classList.add('hidden');
                 }

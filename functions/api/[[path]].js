@@ -68,11 +68,17 @@ export async function onRequest(context) {
   // Handle different API key authentication methods.
   if (service.secret) {
     const secretKey = env[service.secret];
+
+    // --- Enhanced Logging ---
     if (!secretKey) {
+      console.error(`SECRET KEY NOT FOUND: The secret named '${service.secret}' was not found in the worker's environment.`);
       return new Response(`API key for ${service.hostname} is not configured.`, {
         status: 500,
       });
+    } else {
+      console.log(`Secret key '${service.secret}' found successfully.`);
     }
+    // --- End Enhanced Logging ---
 
     if (servicePrefix === "gh" || servicePrefix === "maptiler") {
       // GraphHopper and MapTiler use a 'key' query parameter.
