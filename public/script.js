@@ -2397,7 +2397,7 @@
             async function fetchFromGraphHopper(pins) {
                 console.log("Attempting to fetch route from GraphHopper (direct client call)...");
                 const points = pins.map(pin => `point=${pin.lat},${pin.lng}`).join('&');
-                const url = `https://graphhopper.com/api/1/route?${points}&vehicle=car&calc_points=true&points_encoded=false&type=json&key=${CONFIG.GRAPHHOPPER_PUBLIC_KEY}`;
+                const url = `https://graphhopper.com/api/1/route?${points}&vehicle=car&calc_points=true&points_encoded=false&type=json&elevation=true&key=${CONFIG.GRAPHHOPPER_PUBLIC_KEY}`;
                 
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`GraphHopper API error: ${response.status}`);
@@ -2407,7 +2407,7 @@
                 const path = data.paths[0];
                 console.log("Success from GraphHopper.");
                 return {
-                    coordinates: path.points.coordinates.map(c => [c[1], c[0]]), // lat, lng (no elevation)
+                    coordinates: path.points.coordinates.map(c => [c[1], c[0], c[2]]), // lat, lng, elevation
                     distance: path.distance,
                 };
             }
