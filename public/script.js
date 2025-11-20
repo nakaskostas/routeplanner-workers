@@ -475,7 +475,7 @@
                 // --- CONFIGURATION ---
                 const CONFIG = {
                     MAPTILER_PUBLIC_KEY: 'u8zRQYN6M4dzdhc7tvka', // <-- ΑΝΤΙΚΑΤΑΣΤΗΣΕ ΤΟ ΜΕ ΤΟ ΔΗΜΟΣΙΟ ΚΛΕΙΔΙ ΣΟΥ
-                    GRAPHHOPPER_PUBLIC_KEY: 'YOUR_GRAPHHOPPER_KEY', // <-- ΒΑΛΕ ΕΔΩ ΤΟ ΚΛΕΙΔΙ ΣΟΥ ΑΠΟ ΤΟ GRAPHHOPPER
+                    GRAPHHOPPER_PUBLIC_KEY: 'f9d9a046-0db0-48a8-a935-d44e62700a40', // <-- ΒΑΛΕ ΕΔΩ ΤΟ ΚΛΕΙΔΙ ΣΟΥ ΑΠΟ ΤΟ GRAPHHOPPER
                     ELEVATION_API_URL: '/api/open-elevation/lookup', // Use proxy
                     MAX_PINS: 40, // Number of Pins
                     DEFAULT_CENTER: [39.663967, 20.852770], // Ioannina, Greece
