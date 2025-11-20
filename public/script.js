@@ -1127,6 +1127,40 @@
         let markerRemovalTimer = null; // Timer to control the removal of the elevation highlight marker
 
         // --- INITIALIZATION ---
+        function setupMapStyleSwitcher() {
+            const switcher = document.getElementById('mapStyleSwitcher');
+            Object.keys(state.mapStyles).forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                switcher.appendChild(option);
+            });
+
+            switcher.addEventListener('change', (e) => {
+                const selectedStyleName = e.target.value;
+                const newStyle = state.mapStyles[selectedStyleName];
+
+                if (newStyle) {
+                    state.map.setStyle(newStyle);
+                    
+                    // After the style changes, re-apply our custom sources/layers.
+                    // Then, if a route exists, wait for the map to be fully idle
+                    // before attempting to redraw the route data. This prevents race conditions.
+                    state.map.once('styledata', () => {
+                        reapplyCustomMapElements();
+                        if (state.currentRoute) {
+                            state.map.once('idle', () => {
+                                // A final check in case the user cleared the route while the style was changing
+                                if (state.currentRoute) {
+                                    displayColoredRoute(state.currentRoute.coordinates);
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', initApp);
 
         function initApp() {
@@ -1135,6 +1169,7 @@
             setupEventListeners();
             setupRouteNameEditing();
             initializeDraggableElements();
+            setupMapStyleSwitcher();
             
             if (!parseUrlAndRestore()) {
                 // saveState(); // TODO: Re-enable after refactoring saveState
@@ -1295,39 +1330,6 @@
         }
 
 
-        // --- MAP STYLE SWITCHER LOGIC ---
-        const switcher = document.getElementById('mapStyleSwitcher');
-        Object.keys(state.mapStyles).forEach(name => {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            switcher.appendChild(option);
-        });
-
-        switcher.addEventListener('change', (e) => {
-            const selectedStyleName = e.target.value;
-            const newStyle = state.mapStyles[selectedStyleName];
-
-            if (newStyle) {
-                state.map.setStyle(newStyle);
-                
-                // After the style changes, re-apply our custom sources/layers.
-                // Then, if a route exists, wait for the map to be fully idle
-                // before attempting to redraw the route data. This prevents race conditions.
-                state.map.once('styledata', () => {
-                    reapplyCustomMapElements();
-                    if (state.currentRoute) {
-                        state.map.once('idle', () => {
-                            // A final check in case the user cleared the route while the style was changing
-                            if (state.currentRoute) {
-                                displayColoredRoute(state.currentRoute.coordinates);
-                            }
-                        });
-                    }
-                });
-            }
-        });
-
         function setupEventListeners() {
             document.getElementById('clearRoute').addEventListener('click', () => {
             state.pins = [];
@@ -1345,6 +1347,7 @@
             document.getElementById('gpx-file-input').addEventListener('change', handleGpxFileUpload);
             document.getElementById('downloadPDF').addEventListener('click', downloadRoutePDF);
             document.getElementById('shareButton').addEventListener('click', copyShareLink);
+            document.getElementById('undoButton').addEventListener('click', undo);
 
             // --- SEARCH FUNCTIONALITY ---
             const searchInput = document.getElementById('search-input');
