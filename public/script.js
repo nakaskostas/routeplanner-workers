@@ -1339,7 +1339,7 @@
             const panel = document.getElementById('addressPanel');
             if(panel) panel.style.height = '';
             adjustPanelHeightForContent();
-        });
+            });
             document.getElementById('downloadGPX').addEventListener('click', downloadGPX);
             document.getElementById('uploadGPX').addEventListener('click', () => document.getElementById('gpx-file-input').click());
             document.getElementById('gpx-file-input').addEventListener('change', handleGpxFileUpload);
@@ -1572,7 +1572,9 @@
                 retryFailedAddresses(); // Retry only failed addresses
             });
         }
-        }
+    
+        
+    
 
 
             
