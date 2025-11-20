@@ -35,7 +35,8 @@ const SERVICE_MAP = {
  * @param {URL} context.url - The URL of the incoming request.
  */
 export async function onRequest(context) {
-  const { request, env, url } = context;
+  const { request, env } = context;
+  const url = new URL(request.url);
 
   // Extract the service prefix and the rest of the path from the URL.
   // e.g., /api/ors/v2/directions/driving-car/geojson -> [ "ors", "v2/directions/driving-car/geojson" ]
