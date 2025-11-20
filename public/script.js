@@ -1277,41 +1277,39 @@
             }
         }
 
-
-        // --- MAP STYLE SWITCHER LOGIC ---
-        const switcher = document.getElementById('mapStyleSwitcher');
-        Object.keys(state.mapStyles).forEach(name => {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            switcher.appendChild(option);
-        });
-
-        switcher.addEventListener('change', (e) => {
-            const selectedStyleName = e.target.value;
-            const newStyle = state.mapStyles[selectedStyleName];
-
-            if (newStyle) {
-                state.map.setStyle(newStyle);
-                
-                // After the style changes, re-apply our custom sources/layers.
-                // Then, if a route exists, wait for the map to be fully idle
-                // before attempting to redraw the route data. This prevents race conditions.
-                state.map.once('styledata', () => {
-                    reapplyCustomMapElements();
-                    if (state.currentRoute) {
-                        state.map.once('idle', () => {
-                            // A final check in case the user cleared the route while the style was changing
-                            if (state.currentRoute) {
-                                displayColoredRoute(state.currentRoute.coordinates);
-                            }
-                        });
-                    }
-                });
-            }
-        });
-
         function setupEventListeners() {
+            // --- MAP STYLE SWITCHER LOGIC ---
+            const switcher = document.getElementById('mapStyleSwitcher');
+            Object.keys(state.mapStyles).forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                switcher.appendChild(option);
+            });
+
+            switcher.addEventListener('change', (e) => {
+                const selectedStyleName = e.target.value;
+                const newStyle = state.mapStyles[selectedStyleName];
+
+                if (newStyle) {
+                    state.map.setStyle(newStyle);
+                    
+                    // After the style changes, re-apply our custom sources/layers.
+                    // Then, if a route exists, wait for the map to be fully idle
+                    // before attempting to redraw the route data. This prevents race conditions.
+                    state.map.once('styledata', () => {
+                        reapplyCustomMapElements();
+                        if (state.currentRoute) {
+                            state.map.once('idle', () => {
+                                // A final check in case the user cleared the route while the style was changing
+                                if (state.currentRoute) {
+                                    displayColoredRoute(state.currentRoute.coordinates);
+                                }
+                            });
+                        }
+                    });
+                }
+            });
             document.getElementById('clearRoute').addEventListener('click', () => {
             state.pins = [];
             state.pinAddresses = [];
@@ -1554,68 +1552,6 @@
             document.getElementById('addressPanelReload').addEventListener('click', () => {
                 retryFailedAddresses(); // Retry only failed addresses
             });
-
-            // This function sets up all our custom sources and layers.
-            // It's called on initial map load and after every style change.
-            function reapplyCustomMapElements() {
-                // Guard against running if sources already exist
-                if (state.map.getSource('routeSource')) return;
-
-                // Add sources
-                state.map.addSource('terrainSource', {
-                    type: 'raster-dem',
-                    url: `https://api.maptiler.com/tiles/terrain-rgb/tiles.json?key=${CONFIG.MAPTILER_PUBLIC_KEY}`
-                });
-                state.map.addSource('routeSource', { type: 'geojson', data: { type: 'Feature', geometry: null } });
-                state.map.addSource('steepRouteSource', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-                state.map.addSource('routeArrowsSource', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-
-                // Add layers
-                state.map.addLayer({
-                    id: 'routeLayer',
-                    type: 'line',
-                    source: 'routeSource',
-                    layout: { 'line-join': 'round', 'line-cap': 'round' },
-                    paint: { 'line-color': '#3B82F6', 'line-width': 5, 'line-opacity': 0.8 }
-                });
-                state.map.addLayer({
-                    id: 'steepRouteLayer',
-                    type: 'line',
-                    source: 'steepRouteSource',
-                    layout: { 'line-join': 'round', 'line-cap': 'round' },
-                    paint: { 'line-color': '#EF4444', 'line-width': 6, 'line-opacity': 0 }
-                });
-
-                // Load arrow image and add layer
-                const arrowSvg = `<svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 0L11.1547 1.58254L17.863 5.99999H0V7.99999H17.863L11.1547 12.4175L12 14L24 7L12 0Z" fill="#333333"/></svg>`;
-                const arrowUrl = `data:image/svg+xml;base64,${btoa(arrowSvg)}`;
-                state.map.loadImage(arrowUrl, (error, image) => {
-                    if (error) { console.error('Failed to load arrow image:', error); return; }
-                    if (!state.map.hasImage('route-arrow')) {
-                        state.map.addImage('route-arrow', image);
-                    }
-                    if (!state.map.getLayer('routeArrowsLayer')) {
-                        state.map.addLayer({
-                            id: 'routeArrowsLayer',
-                            type: 'symbol',
-                            source: 'routeArrowsSource',
-                            layout: {
-                                'icon-image': 'route-arrow',
-                                'icon-size': 0.5,
-                                'icon-rotate': ['get', 'bearing'],
-                                'icon-rotation-alignment': 'map',
-                                'icon-allow-overlap': true,
-                                'icon-ignore-placement': true
-                            }
-                        });
-                    }
-                });
-
-                // If a route already exists in the state, redraw it on the new style
-                if (state.currentRoute) {
-                    displayColoredRoute(state.currentRoute.coordinates);
-                }
-            }
 
 
             // --- GENERIC TOOLTIP CREATION ---
