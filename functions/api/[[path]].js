@@ -56,6 +56,12 @@ export async function onRequest(context) {
   }
   // --- End Fix ---
 
+  // --- Fix for Open-Elevation API path ---
+  if (servicePrefix === "open-elevation") {
+    apiPath = `api/v1/${apiPath}`;
+  }
+  // --- End Fix ---
+
   // Ensure the target hostname is in our allowlist for security.
   if (!ALLOWED_HOSTS.includes(service.hostname)) {
     return new Response(`Proxying to ${service.hostname} is not allowed.`, {
