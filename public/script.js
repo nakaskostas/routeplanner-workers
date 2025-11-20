@@ -1151,7 +1151,7 @@
         }
         
         function initMap() {
-            maptilersdk.config.apiKey = CONFIG.MAPTILER_PUBLIC_KEY;
+            maptilersdk.config.apiKey = CONFIG.MAPTILER_PUBLIC_KEY; // Keep API key for direct tile loading
 
             state.map = new maptilersdk.Map({
                 container: 'map',
@@ -1159,7 +1159,23 @@
                 center: [CONFIG.DEFAULT_CENTER[1], CONFIG.DEFAULT_CENTER[0]],
                 zoom: CONFIG.DEFAULT_ZOOM,
                 hash: false,
-                preserveDrawingBuffer: true
+                preserveDrawingBuffer: true,
+                transformRequest: (url, resourceType) => {
+                    // Only intercept MapTiler API calls (not actual tiles)
+                    if (url.includes('api.maptiler.com')) {
+                        // Exclude tile requests from proxying
+                        if (resourceType === 'Tile') {
+                            return { url }; // Return original URL for tiles (direct access)
+                        }
+
+                        // For other MapTiler API requests (e.g., style.json, terrain metadata), use the proxy
+                        const proxiedUrl = new URL(url);
+                        proxiedUrl.searchParams.delete('key'); // Remove original key, proxy will add it
+                        const finalUrl = `/api/maptiler${proxiedUrl.pathname}${proxiedUrl.search}`;
+                        return { url: finalUrl };
+                    }
+                    return { url }; // For non-MapTiler requests, do nothing.
+                }
             });
 
             state.mapStyles = {
@@ -1222,7 +1238,8 @@
             // Add terrain source
             state.map.addSource('terrainSource', {
                 type: 'raster-dem',
-                url: `https://api.maptiler.com/tiles/terrain-rgb/tiles.json?key=${CONFIG.MAPTILER_PUBLIC_KEY}`
+                // The `transformRequest` function in initMap will handle proxying this URL
+                url: `https://api.maptiler.com/tiles/terrain-rgb/tiles.json` 
             });
 
             // Add route data sources
@@ -1277,39 +1294,41 @@
             }
         }
 
+
+        // --- MAP STYLE SWITCHER LOGIC ---
+        const switcher = document.getElementById('mapStyleSwitcher');
+        Object.keys(state.mapStyles).forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            switcher.appendChild(option);
+        });
+
+        switcher.addEventListener('change', (e) => {
+            const selectedStyleName = e.target.value;
+            const newStyle = state.mapStyles[selectedStyleName];
+
+            if (newStyle) {
+                state.map.setStyle(newStyle);
+                
+                // After the style changes, re-apply our custom sources/layers.
+                // Then, if a route exists, wait for the map to be fully idle
+                // before attempting to redraw the route data. This prevents race conditions.
+                state.map.once('styledata', () => {
+                    reapplyCustomMapElements();
+                    if (state.currentRoute) {
+                        state.map.once('idle', () => {
+                            // A final check in case the user cleared the route while the style was changing
+                            if (state.currentRoute) {
+                                displayColoredRoute(state.currentRoute.coordinates);
+                            }
+                        });
+                    }
+                });
+            }
+        });
+
         function setupEventListeners() {
-            // --- MAP STYLE SWITCHER LOGIC ---
-            const switcher = document.getElementById('mapStyleSwitcher');
-            Object.keys(state.mapStyles).forEach(name => {
-                const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                switcher.appendChild(option);
-            });
-
-            switcher.addEventListener('change', (e) => {
-                const selectedStyleName = e.target.value;
-                const newStyle = state.mapStyles[selectedStyleName];
-
-                if (newStyle) {
-                    state.map.setStyle(newStyle);
-                    
-                    // After the style changes, re-apply our custom sources/layers.
-                    // Then, if a route exists, wait for the map to be fully idle
-                    // before attempting to redraw the route data. This prevents race conditions.
-                    state.map.once('styledata', () => {
-                        reapplyCustomMapElements();
-                        if (state.currentRoute) {
-                            state.map.once('idle', () => {
-                                // A final check in case the user cleared the route while the style was changing
-                                if (state.currentRoute) {
-                                    displayColoredRoute(state.currentRoute.coordinates);
-                                }
-                            });
-                        }
-                    });
-                }
-            });
             document.getElementById('clearRoute').addEventListener('click', () => {
             state.pins = [];
             state.pinAddresses = [];
@@ -1552,63 +1571,10 @@
             document.getElementById('addressPanelReload').addEventListener('click', () => {
                 retryFailedAddresses(); // Retry only failed addresses
             });
+        }
+        }
 
 
-            // --- GENERIC TOOLTIP CREATION ---
-            function setupTooltips() {
-                createTooltipFor(
-                    document.querySelector('#roundTripToggle').closest('label'),
-                    'Ανοίγοντάς το, η διαδρομή σας γυρίζει αυτόματα πίσω στο σημείο εκκίνησης.'
-                );
-
-                createTooltipFor(
-                    document.querySelector('#steepUphillToggle').closest('label'),
-                    'Δείχνει με κόκκινο χρώμα τις απότομες ανηφόρες (>5%) στον χάρτη.'
-                );
-            }
-
-            function createTooltipFor(element, htmlContent) {
-                let tooltip = null;
-
-                const showTooltip = () => {
-                    if (tooltip) return;
-
-                    tooltip = document.createElement('div');
-                    tooltip.className = 'info-tooltip';
-                    tooltip.innerHTML = htmlContent;
-                    document.body.appendChild(tooltip);
-                    
-                    positionTooltip();
-                    
-                    setTimeout(() => {
-                        if (tooltip) tooltip.style.opacity = '1';
-                    }, 10);
-                };
-
-                const hideTooltip = () => {
-                    if (tooltip) {
-                        tooltip.style.opacity = '0';
-                        setTimeout(() => {
-                            if (tooltip && tooltip.parentNode) {
-                                tooltip.parentNode.removeChild(tooltip);
-                            }
-                            tooltip = null;
-                        }, 200);
-                    }
-                };
-                
-                const positionTooltip = () => {
-                    if (!tooltip) return;
-                    const rect = element.getBoundingClientRect();
-                    tooltip.style.left = `${rect.left + window.scrollX + (rect.width / 2) - (tooltip.offsetWidth / 2)}px`;
-                    tooltip.style.top = `${rect.top + window.scrollY - tooltip.offsetHeight - 10}px`;
-                };
-
-                element.addEventListener('mouseenter', showTooltip);
-                element.addEventListener('mouseleave', hideTooltip);
-                window.addEventListener('resize', positionTooltip);
-                window.addEventListener('scroll', positionTooltip, true);
-            }
             
             // --- UNDO/HISTORY MANAGEMENT ---
             function saveState() {
@@ -1785,17 +1751,17 @@
 
                 // Add track if a route is calculated
                 if (state.currentRoute && state.currentRoute.coordinates.length > 0) {
-                    gpx += ' <trk>
+                    gpx += ` <trk>
   <name>Υπολογισμένη Διαδρομή</name>
   <trkseg>
-';
+`;
                     state.currentRoute.coordinates.forEach(coord => {
                         gpx += `   <trkpt lat="${coord[0]}" lon="${coord[1]}"><ele>${coord[2] || 0}</ele></trkpt>
 `;
                     });
-                    gpx += '  </trkseg>
+                    gpx += `  </trkseg>
  </trk>
-';
+`;
                 }
 
                 gpx += '</gpx>';
@@ -2391,12 +2357,13 @@
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json'
-                                },                    body: JSON.stringify({
-                        coordinates: coordinates,
-                        instructions: false,
-                        elevation: true
-                    })
-                });
+                                },
+                                body: JSON.stringify({
+                                    coordinates: coordinates,
+                                    instructions: false,
+                                    elevation: true
+                                })
+                            });
 
                 if (!response.ok) throw new Error(`ORS API error: ${response.status}`);
                 const data = await response.json();
