@@ -1264,8 +1264,8 @@
             });
 
             // Load arrow image and add layer
-            const arrowSvg = `<svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 0L11.1547 1.58254L17.863 5.99999H0V7.99999H17.863L11.1547 12.4175L12 14L24 7L12 0Z" fill="#333333"/></svg>`;
-            const arrowUrl = `data:image/svg+xml;base64,${btoa(arrowSvg)}`;
+            const arrowSvg = `<svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 4 L10 4 L5 10 Z" fill="#333333"/></svg>`;
+            const arrowUrl = `data:image/svg+xml,${encodeURIComponent(arrowSvg)}`;
             state.map.loadImage(arrowUrl, (error, image) => {
                 if (error) { console.error('Failed to load arrow image:', error); return; }
                 if (!state.map.hasImage('route-arrow')) {

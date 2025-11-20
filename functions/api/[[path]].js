@@ -51,6 +51,12 @@ export async function onRequest(context) {
     return new Response("Invalid API service specified.", { status: 400 });
   }
 
+  // --- Fix for GraphHopper which requires /api/1/ prefix ---
+  if (servicePrefix === "gh") {
+    apiPath = `api/1/${apiPath}`;
+  }
+  // --- End Fix ---
+
   // Ensure the target hostname is in our allowlist for security.
   if (!ALLOWED_HOSTS.includes(service.hostname)) {
     return new Response(`Proxying to ${service.hostname} is not allowed.`, {
