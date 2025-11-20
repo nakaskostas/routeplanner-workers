@@ -100,6 +100,9 @@ export async function onRequest(context) {
     finalRequest = new Request(targetUrl, request);
   }
 
+  // Explicitly set the Referer header, as some APIs use it for validation.
+  finalRequest.headers.set("Referer", url.origin);
+
   // Set a more specific User-Agent.
   finalRequest.headers.set(
     "User-Agent",
