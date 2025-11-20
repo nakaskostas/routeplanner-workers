@@ -2328,7 +2328,7 @@
 
                 try {
                     let routeData = null;
-                    const apis = [() => fetchFromORS(pinsForRoute), () => fetchFromGraphHopper(pinsForRoute)];
+                    const apis = [() => fetchFromGraphHopper(pinsForRoute), () => fetchFromORS(pinsForRoute)];
 
                     for (const fetchFunc of apis) {
                         try {
