@@ -472,14 +472,14 @@
 
 
         // --- CONFIGURATION ---
-        // --- CONFIGURATION ---
+                // --- CONFIGURATION ---
                 const CONFIG = {
                     MAPTILER_PUBLIC_KEY: 'u8zRQYN6M4dzdhc7tvka', // <-- ΑΝΤΙΚΑΤΑΣΤΗΣΕ ΤΟ ΜΕ ΤΟ ΔΗΜΟΣΙΟ ΚΛΕΙΔΙ ΣΟΥ
+                    GRAPHHOPPER_PUBLIC_KEY: 'YOUR_GRAPHHOPPER_KEY', // <-- ΒΑΛΕ ΕΔΩ ΤΟ ΚΛΕΙΔΙ ΣΟΥ ΑΠΟ ΤΟ GRAPHHOPPER
                     ELEVATION_API_URL: '/api/open-elevation/lookup', // Use proxy
                     MAX_PINS: 40, // Number of Pins
                     DEFAULT_CENTER: [39.663967, 20.852770], // Ioannina, Greece
-                    DEFAULT_ZOOM: 13,
-                    STEEP_GRADIENT_THRESHOLD: 0.05, // percentage
+                    DEFAULT_ZOOM: 13,                    STEEP_GRADIENT_THRESHOLD: 0.05, // percentage
                     HISTORY_LIMIT: 40, // Max undo actions 
                 };        
         // --- GLOBAL STATE ---
@@ -2395,9 +2395,9 @@
             }
 
             async function fetchFromGraphHopper(pins) {
-                console.log("Attempting to fetch route from GraphHopper...");
+                console.log("Attempting to fetch route from GraphHopper (direct client call)...");
                 const points = pins.map(pin => `point=${pin.lat},${pin.lng}`).join('&');
-                const url = `/api/gh/route?${points}&vehicle=car&calc_points=true&points_encoded=false&type=json`;
+                const url = `https://graphhopper.com/api/1/route?${points}&vehicle=car&calc_points=true&points_encoded=false&type=json&key=${CONFIG.GRAPHHOPPER_PUBLIC_KEY}`;
                 
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`GraphHopper API error: ${response.status}`);
