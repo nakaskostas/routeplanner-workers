@@ -41,9 +41,8 @@ export async function onRequest(context) {
   // Extract the service prefix and the rest of the path from the URL.
   // e.g., /api/ors/v2/directions/driving-car/geojson -> [ "ors", "v2/directions/driving-car/geojson" ]
   const pathSegments = url.pathname.replace("/api/", "").split("/");
-  const servicePrefix = pathSegments.shift();
-  const apiPath = pathSegments.join("/");
-
+      const servicePrefix = pathSegments.shift();
+      let apiPath = pathSegments.join("/");
   const service = SERVICE_MAP[servicePrefix];
 
   // If the service is not in our defined map, it's an invalid request.
