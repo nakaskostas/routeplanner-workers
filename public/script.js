@@ -1316,6 +1316,16 @@
             document.getElementById('shareButton').addEventListener('click', copyShareLink);
             document.getElementById('undoButton').addEventListener('click', undo);
 
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key.toLowerCase() === 'z') {
+                    // Check if the undo button is not disabled before acting
+                    if (!document.getElementById('undoButton').disabled) {
+                        e.preventDefault(); // Prevent browser's default undo (e.g., in text fields)
+                        undo();
+                    }
+                }
+            });
+
             // --- SEARCH FUNCTIONALITY ---
             const searchInput = document.getElementById('search-input');
             const suggestionsList = document.getElementById('search-suggestions');
