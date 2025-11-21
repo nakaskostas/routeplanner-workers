@@ -1311,6 +1311,7 @@
             document.getElementById('downloadGPX').addEventListener('click', downloadGPX);
             document.getElementById('uploadGPX').addEventListener('click', () => document.getElementById('gpx-file-input').click());
             document.getElementById('gpx-file-input').addEventListener('change', handleGpxFileUpload);
+            document.getElementById('recalculateRoute').addEventListener('click', calculateRoute);
             document.getElementById('downloadPDF').addEventListener('click', downloadRoutePDF);
             document.getElementById('shareButton').addEventListener('click', copyShareLink);
             document.getElementById('undoButton').addEventListener('click', undo);
@@ -2850,6 +2851,7 @@
             
             document.getElementById('instructions').style.display = hasPins ? 'none' : 'block';
             document.getElementById('downloadGPX').style.display = hasRoute ? 'flex' : 'none';
+            document.getElementById('recalculateRoute').style.display = hasRoute ? 'flex' : 'none';
             document.getElementById('downloadPDF').style.display = hasRoute ? 'flex' : 'none';
             document.getElementById('shareButton').disabled = !hasPins;
             showPanelButton.classList.toggle('hidden', !hasRoute || bottomPanel.classList.contains('is-visible'));
