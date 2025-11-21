@@ -1,0 +1,7 @@
+# Ignore Node.js dependencies
+# These are installed via npm and should not be in version control
+node_modules/
+
+# Ignore Cloudflare Wrangler's local development directory
+# This is generated automatically by the 'wrangler' command
+.wrangler/

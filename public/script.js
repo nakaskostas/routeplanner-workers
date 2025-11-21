@@ -1280,7 +1280,6 @@
             // Add route data sources
             state.map.addSource('routeSource', { type: 'geojson', data: { type: 'Feature', geometry: null } });
             state.map.addSource('steepRouteSource', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-            state.map.addSource('routeArrowsSource', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
 
             // Add layers
             state.map.addLayer({
@@ -1290,39 +1289,6 @@
                 layout: { 'line-join': 'round', 'line-cap': 'round' },
                 paint: { 'line-color': '#3B82F6', 'line-width': 5, 'line-opacity': 0.8 }
             });
-            state.map.addLayer({
-                id: 'steepRouteLayer',
-                type: 'line',
-                source: 'steepRouteSource',
-                layout: { 'line-join': 'round', 'line-cap': 'round' },
-                paint: { 'line-color': '#EF4444', 'line-width': 6, 'line-opacity': 0 }
-            });
-
-            // Load arrow image and add layer
-            const arrowSvg = `<svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 4 L10 4 L5 10 Z" fill="#333333"/></svg>`;
-            const arrowUrl = `data:image/svg+xml,${encodeURIComponent(arrowSvg)}`;
-            state.map.loadImage(arrowUrl, (error, image) => {
-                if (error) { console.error('Failed to load arrow image:', error); return; }
-                if (!state.map.hasImage('route-arrow')) {
-                    state.map.addImage('route-arrow', image);
-                }
-                if (!state.map.getLayer('routeArrowsLayer')) {
-                    state.map.addLayer({
-                        id: 'routeArrowsLayer',
-                        type: 'symbol',
-                        source: 'routeArrowsSource',
-                        layout: {
-                            'icon-image': 'route-arrow',
-                            'icon-size': 0.5,
-                            'icon-rotate': ['get', 'bearing'],
-                            'icon-rotation-alignment': 'map',
-                            'icon-allow-overlap': true,
-                            'icon-ignore-placement': true
-                        }
-                    });
-                }
-            });
-
             // If a route already exists in the state, redraw it on the new style
             if (state.currentRoute) {
                 displayColoredRoute(state.currentRoute.coordinates);
@@ -2539,58 +2505,6 @@
                                                 }
                                             }
                                     
-                                            // Helper function to calculate bearing between two points
-                                            function getBearing(start, end) {
-                                                const startLng = start[0] * Math.PI / 180;
-                                                const startLat = start[1] * Math.PI / 180;
-                                                const endLng = end[0] * Math.PI / 180;
-                                                const endLat = end[1] * Math.PI / 180;
-                    
-                                                const y = Math.sin(endLng - startLng) * Math.cos(endLat);
-                                                const x = Math.cos(startLat) * Math.sin(endLat) - Math.sin(startLat) * Math.cos(endLat) * Math.cos(endLng - startLng);
-                                                const bearing = Math.atan2(y, x) * 180 / Math.PI;
-                                                return (bearing + 360) % 360;
-                                            }
-                    
-                                            // Helper function to get points along a line for arrows
-                                            function getArrowPoints(coordinates, spacing) {
-                                                if (coordinates.length < 2) return [];
-                                                
-                                                const arrowPoints = [];
-                                                let totalDistance = 0;
-                                                let distanceToNextArrow = spacing / 2; // Start halfway
-                    
-                                                for (let i = 0; i < coordinates.length - 1; i++) {
-                                                    const start = coordinates[i];
-                                                    const end = coordinates[i + 1];
-                                                    const segmentDistance = haversineDistanceObjects({lng: start[0], lat: start[1]}, {lng: end[0], lat: end[1]});
-                    
-                                                    while (totalDistance + segmentDistance >= distanceToNextArrow) {
-                                                        const distanceAlongSegment = distanceToNextArrow - totalDistance;
-                                                        const ratio = segmentDistance > 0 ? distanceAlongSegment / segmentDistance : 0;
-                                                        
-                                                        const pointLng = start[0] + (end[0] - start[0]) * ratio;
-                                                        const pointLat = start[1] + (end[1] - start[1]) * ratio;
-                                                        
-                                                        const bearing = getBearing(start, end);
-                    
-                                                        arrowPoints.push({
-                                                            type: 'Feature',
-                                                            geometry: {
-                                                                type: 'Point',
-                                                                coordinates: [pointLng, pointLat]
-                                                            },
-                                                            properties: {
-                                                                bearing: bearing
-                                                            }
-                                                        });
-                                                        distanceToNextArrow += spacing;
-                                                    }
-                                                    totalDistance += segmentDistance;
-                                                }
-                                                return arrowPoints;
-                                            }
-                    
                                             function displayColoredRoute(routeCoordinates) {
                                                 if (!state.map.isStyleLoaded()) {
                                                     state.map.once('styledata', () => displayColoredRoute(routeCoordinates));
@@ -2661,26 +2575,15 @@
                                                     state.map.setPaintProperty('steepRouteLayer', 'line-opacity', state.showSteepHighlight ? 0.8 : 0);
                                                 }
                     
-                                                // 4. Handle route arrows
-                                                const arrowPoints = getArrowPoints(geojsonCoordinates, 400); // 400m spacing
-                                                const arrowsSource = state.map.getSource('routeArrowsSource');
-                                                if (arrowsSource) {
-                                                    arrowsSource.setData({
-                                                        type: 'FeatureCollection',
-                                                        features: arrowPoints
-                                                    });
-                                                }
-                    
-                                                // 5. Zoom map to fit the route
-                                                if (geojsonCoordinates.length > 0) {
-                                                    const bounds = new maptilersdk.LngLatBounds(geojsonCoordinates[0], geojsonCoordinates[0]);
-                                                    for (const coord of geojsonCoordinates) {
-                                                        bounds.extend(coord);
-                                                    }
-                                                    state.map.fitBounds(bounds, { padding: 80, duration: 1000 });
-                                                }
-                                            }
-                                    
+                                                                                                 // 5. Zoom map to fit the route
+                                                                                                if (geojsonCoordinates.length > 0) {
+                                                                                                    const bounds = new maptilersdk.LngLatBounds(geojsonCoordinates[0], geojsonCoordinates[0]);
+                                                                                                    for (const coord of geojsonCoordinates) {
+                                                                                                        bounds.extend(coord);
+                                                                                                    }
+                                                                                                    state.map.fitBounds(bounds, { padding: 80, duration: 1000 });
+                                                                                                }
+                                                                                            }                                    
                                             function updateRouteStats(data) {
                                                 const formatDistance = (d) => d > 1000 ? `${(d / 1000).toFixed(2)} km` : `${Math.round(d)} m`;
                                                 
@@ -2794,15 +2697,11 @@
                                                     const routeSource = state.map.getSource('routeSource');
                                                     if (routeSource) routeSource.setData({ type: 'Feature', geometry: null });
                                                     
-                                                    const steepSource = state.map.getSource('steepRouteSource');
-                                                    if (steepSource) steepSource.setData({ type: 'FeatureCollection', features: [] });
-                    
-                                                    const arrowsSource = state.map.getSource('routeArrowsSource');
-                                                    if (arrowsSource) arrowsSource.setData({ type: 'FeatureCollection', features: [] });
-                                                }
-                                                
-                                                if (state.elevationChart) {
-                                                    state.elevationChart.destroy();
+                                                                                                         const steepSource = state.map.getSource('steepRouteSource');
+                                                                                                        if (steepSource) steepSource.setData({ type: 'FeatureCollection', features: [] });
+                                                                                                    }
+                                                                                                    
+                                                                                                    if (state.elevationChart) {                                                    state.elevationChart.destroy();
                                                     state.elevationChart = null;
                                                 }
                                                 if (state.highlightMarker) {
