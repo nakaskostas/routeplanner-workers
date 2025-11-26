@@ -487,11 +487,17 @@
             map: null,
             pins: [], // Stores maptilersdk.LngLat objects
             markers: [], // Stores maptilersdk.Marker objects
-            // routePolylines, routeArrows, polylineDecorator are removed as they are Leaflet-specific
             elevationChart: null,
             currentRoute: null,
-            // currentTileLayer is removed, managed by map.getStyle()
-            mapStyles: {}, // To store MapTiler styles
+            mapStyleData: [
+                { name: 'Οδικός', style: maptilersdk.MapStyle.STREETS, image: 'assets/Streets.png' },
+                { name: 'Δορυφορικός', style: maptilersdk.MapStyle.SATELLITE, image: 'assets/Satellite.png' },
+                { name: 'Υβριδικός', style: maptilersdk.MapStyle.HYBRID, image: 'assets/Hybrid.png' },
+                { name: 'Τοπογραφικός', style: maptilersdk.MapStyle.TOPO, image: 'assets/Topographic.png' },
+                { name: 'Απλός', style: maptilersdk.MapStyle.BASIC, image: 'assets/Minimal.png' }
+            ],
+            activeMapStyleName: 'Οδικός',
+            styleMenuCloseTimer: null,
             currentElevation: { data: [], coordinates: [] },
             highlightMarker: null,
             selectedMarkerIndex: -1,
@@ -1127,40 +1133,6 @@
         let markerRemovalTimer = null; // Timer to control the removal of the elevation highlight marker
 
         // --- INITIALIZATION ---
-        function setupMapStyleSwitcher() {
-            const switcher = document.getElementById('mapStyleSwitcher');
-            Object.keys(state.mapStyles).forEach(name => {
-                const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                switcher.appendChild(option);
-            });
-
-            switcher.addEventListener('change', (e) => {
-                const selectedStyleName = e.target.value;
-                const newStyle = state.mapStyles[selectedStyleName];
-
-                if (newStyle) {
-                    state.map.setStyle(newStyle);
-                    
-                    // After the style changes, re-apply our custom sources/layers.
-                    // Then, if a route exists, wait for the map to be fully idle
-                    // before attempting to redraw the route data. This prevents race conditions.
-                    state.map.once('styledata', () => {
-                        reapplyCustomMapElements();
-                        if (state.currentRoute) {
-                            state.map.once('idle', () => {
-                                // A final check in case the user cleared the route while the style was changing
-                                if (state.currentRoute) {
-                                    displayColoredRoute(state.currentRoute.coordinates);
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-        }
-
         document.addEventListener('DOMContentLoaded', initApp);
 
         function initApp() {
@@ -1169,7 +1141,7 @@
             setupEventListeners();
             setupRouteNameEditing();
             initializeDraggableElements();
-            setupMapStyleSwitcher();
+            initMapStyleSwitcher(); // New function for the map style widget
             
             if (!parseUrlAndRestore()) {
                 // saveState(); // TODO: Re-enable after refactoring saveState
@@ -1179,6 +1151,123 @@
             console.log('Εφαρμογή Σχεδιασμού Διαδρομής αρχικοποιήθηκε με MapTiler SDK.');
         }
 
+        // --- NEW MAP STYLE SWITCHER LOGIC ---
+
+        /**
+         * Initializes the new map style switcher widget, renders it, and sets up event listeners for hover and click.
+         */
+        function initMapStyleSwitcher() {
+            const container = document.getElementById('map-style-switcher');
+            if (!container) return;
+            
+            // Initial render
+            renderMapStyleSwitcher();
+
+            // Setup event listeners for the container
+            const innerContainer = container.querySelector('.map-style-container');
+
+            // Event listener for clicks (delegated)
+            container.addEventListener('click', (e) => {
+                const target = e.target.closest('.map-style-item');
+                if (target && target.dataset.styleName) {
+                    handleMapStyleClick(target.dataset.styleName);
+                }
+            });
+
+            // Event listeners for hover with delay
+            container.addEventListener('mouseenter', () => {
+                clearTimeout(state.styleMenuCloseTimer);
+                const innerContainer = container.querySelector('.map-style-container');
+                if (innerContainer) {
+                    innerContainer.classList.add('menu-visible');
+                }
+            });
+
+            container.addEventListener('mouseleave', () => {
+                state.styleMenuCloseTimer = setTimeout(() => {
+                    const innerContainer = container.querySelector('.map-style-container');
+                    if (innerContainer) {
+                        innerContainer.classList.remove('menu-visible');
+                    }
+                }, 1500); // 1.5 second delay
+            });
+        }
+
+        /**
+         * Renders the HTML for the map style switcher widget based on the current state.
+         * This function is called by initMapStyleSwitcher and handleMapStyleClick.
+         */
+        function renderMapStyleSwitcher() {
+            const container = document.getElementById('map-style-switcher');
+            if (!container) return;
+
+            const activeStyle = state.mapStyleData.find(s => s.name === state.activeMapStyleName);
+            const inactiveStyles = state.mapStyleData.filter(s => s.name !== state.activeMapStyleName);
+
+            let menuItemsHtml = inactiveStyles.map(style => `
+                <button class="map-style-item" data-style-name="${style.name}">
+                    <img src="${style.image}" alt="${style.name}" class="map-style-thumbnail">
+                    <span class="map-style-label">${style.name}</span>
+                </button>
+            `).join('');
+
+            // Keep the .menu-visible class if it's already there
+            const currentInnerContainer = container.querySelector('.map-style-container');
+            const wasVisible = currentInnerContainer ? currentInnerContainer.classList.contains('menu-visible') : false;
+
+            const widgetHtml = `
+                <div class="map-style-container ${wasVisible ? 'menu-visible' : ''}">
+                    <button id="active-map-style" class="map-style-item" data-style-name="${activeStyle.name}">
+                        <img src="${activeStyle.image}" alt="${activeStyle.name}" class="map-style-thumbnail">
+                        <span class="map-style-label">${activeStyle.name}</span>
+                    </button>
+                    <div class="map-style-menu">
+                        ${menuItemsHtml}
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = widgetHtml;
+        }
+
+        /**
+         * Handles the click on a map style item.
+         * @param {string} styleName The name of the style that was clicked.
+         */
+        function handleMapStyleClick(styleName) {
+            if (styleName === state.activeMapStyleName) {
+                // If the active style is clicked, do nothing.
+                // This could be used to just close the menu if it's sticky.
+                return;
+            }
+
+            const selectedStyleData = state.mapStyleData.find(s => s.name === styleName);
+            if (!selectedStyleData) return;
+
+            // Set the new style on the map
+            state.map.setStyle(selectedStyleData.style);
+            
+            // Update the state
+            state.activeMapStyleName = styleName;
+            
+            // Re-render the widget to reflect the change
+            renderMapStyleSwitcher();
+
+            // After the style changes, re-apply our custom sources/layers.
+            // This is critical because setStyle removes all existing layers and sources.
+            state.map.once('styledata', () => {
+                reapplyCustomMapElements();
+                if (state.currentRoute) {
+                    state.map.once('idle', () => {
+                        // A final check in case the user cleared the route while the style was changing
+                        if (state.currentRoute) {
+                            displayColoredRoute(state.currentRoute.coordinates);
+                        }
+                    });
+                }
+            });
+        }
+        
         function initUIElements() {
             bottomPanel = document.getElementById('bottomPanel');
             hidePanelButton = document.getElementById('hide-panel-button');
@@ -1188,9 +1277,11 @@
         function initMap() {
             maptilersdk.config.apiKey = CONFIG.MAPTILER_PUBLIC_KEY; // Keep API key for direct tile loading
 
+            const initialStyle = state.mapStyleData.find(s => s.name === state.activeMapStyleName).style;
+
             state.map = new maptilersdk.Map({
                 container: 'map',
-                style: maptilersdk.MapStyle.STREETS,
+                style: initialStyle,
                 center: [CONFIG.DEFAULT_CENTER[1], CONFIG.DEFAULT_CENTER[0]],
                 zoom: CONFIG.DEFAULT_ZOOM,
                 hash: false,
@@ -1212,14 +1303,6 @@
                     return { url }; // For non-MapTiler requests, do nothing.
                 }
             });
-
-            state.mapStyles = {
-                'Οδικός': maptilersdk.MapStyle.STREETS,
-                'Δορυφορικός': maptilersdk.MapStyle.SATELLITE,
-                'Υβριδικός': maptilersdk.MapStyle.HYBRID,
-                'Τοπογραφικός': maptilersdk.MapStyle.TOPO,
-                'Απλός': maptilersdk.MapStyle.BASIC,
-            };
 
             state.map.on('load', () => {
                 // Add standard controls to the top-left corner.
