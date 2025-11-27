@@ -304,6 +304,7 @@
                 document.getElementById('contextMenu'),
                 document.getElementById('hide-panel-button'),
                 document.getElementById('show-panel-button'),
+                document.getElementById('map-style-switcher'), // Hide map style switcher
                 ...document.querySelectorAll('.maptiler-control-container, .maplibregl-control-container')
             ];
             const originalDisplays = new Map();
