@@ -1652,9 +1652,7 @@
                 state.isAddressPanelVisible = false;
             });
 
-            document.getElementById('addressPanelReload').addEventListener('click', () => {
-                retryFailedAddresses(); // Retry only failed addresses
-            });
+
         }
     
         
@@ -2950,7 +2948,7 @@
             
             document.getElementById('instructions').style.display = hasPins ? 'none' : 'block';
             document.getElementById('downloadGPX').style.display = hasRoute ? 'flex' : 'none';
-            document.getElementById('recalculateRoute').style.display = hasRoute ? 'flex' : 'none';
+            document.getElementById('recalculateRoute').disabled = !hasRoute;
             document.getElementById('downloadPDF').style.display = hasRoute ? 'flex' : 'none';
             document.getElementById('shareButton').disabled = !hasPins;
             showPanelButton.classList.toggle('hidden', !hasRoute || bottomPanel.classList.contains('is-visible'));
