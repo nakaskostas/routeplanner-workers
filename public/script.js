@@ -1204,12 +1204,20 @@
             const activeStyle = state.mapStyleData.find(s => s.name === state.activeMapStyleName);
             const inactiveStyles = state.mapStyleData.filter(s => s.name !== state.activeMapStyleName);
 
-            let menuItemsHtml = inactiveStyles.map(style => `
-                <button class="map-style-item" data-style-name="${style.name}">
-                    <img src="${style.image}" alt="${style.name}" class="map-style-thumbnail">
-                    <span class="map-style-label">${style.name}</span>
-                </button>
-            `).join('');
+            // Helper to generate a single item
+            const createStyleItem = (style, is_active = false) => {
+                const longTextClass = (style.name === 'Τοπογραφικός' || style.name === 'Δορυφορικός') ? 'long-text' : '';
+                const id_attr = is_active ? 'id="active-map-style"' : '';
+                return `
+                    <button ${id_attr} class="map-style-item ${longTextClass}" data-style-name="${style.name}">
+                        <img src="${style.image}" alt="${style.name}" class="map-style-thumbnail">
+                        <div class="map-style-label"><span>${style.name}</span></div>
+                    </button>
+                `;
+            }
+
+            let menuItemsHtml = inactiveStyles.map(style => createStyleItem(style, false)).join('');
+            const activeItemHtml = createStyleItem(activeStyle, true);
 
             // Keep the .menu-visible class if it's already there
             const currentInnerContainer = container.querySelector('.map-style-container');
@@ -1217,10 +1225,7 @@
 
             const widgetHtml = `
                 <div class="map-style-container ${wasVisible ? 'menu-visible' : ''}">
-                    <button id="active-map-style" class="map-style-item" data-style-name="${activeStyle.name}">
-                        <img src="${activeStyle.image}" alt="${activeStyle.name}" class="map-style-thumbnail">
-                        <span class="map-style-label">${activeStyle.name}</span>
-                    </button>
+                    ${activeItemHtml}
                     <div class="map-style-menu">
                         ${menuItemsHtml}
                     </div>

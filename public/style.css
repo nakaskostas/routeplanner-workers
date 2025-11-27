@@ -362,14 +362,6 @@
             pointer-events: none; /* So it doesn't interfere with mouse events */
         }
 
-        /* --- Map Style Switcher --- */
-        #map-style-switcher {
-            position: absolute;
-            top: 90px;
-            left: 1rem;
-            z-index: 1001; /* Above map controls, below panels */
-        }
-
         .map-style-container {
             position: relative;
             display: flex;
@@ -443,3 +435,22 @@
             transform: translateX(0);
             pointer-events: auto; /* Clickable when visible */
         }
+
+/* --- Marquee Effect for Long Map Style Labels --- */
+.map-style-label {
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.map-style-label > span {
+    display: inline-block;
+    transform: translateX(0);
+    transition: transform 1s ease-in-out;
+}
+
+.map-style-item.long-text:hover .map-style-label > span {
+    /* Translate left by an amount that should reveal the text.
+       We can adjust this value if it's too much or too little. */
+    transform: translateX(-20px); 
+    transition-delay: 0.5s; /* Add a longer delay on hover-in */
+}
