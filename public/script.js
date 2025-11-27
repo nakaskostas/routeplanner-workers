@@ -1378,6 +1378,19 @@
                 layout: { 'line-join': 'round', 'line-cap': 'round' },
                 paint: { 'line-color': '#3B82F6', 'line-width': 5, 'line-opacity': 0.8 }
             });
+
+            // Add the missing steep route layer
+            state.map.addLayer({
+                id: 'steepRouteLayer',
+                type: 'line',
+                source: 'steepRouteSource',
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: {
+                    'line-color': '#E53E3E', // A strong red color
+                    'line-width': 6, // Slightly wider to be visible over the blue line
+                    'line-opacity': state.showSteepHighlight ? 0.8 : 0 // Initial opacity based on state
+                }
+            });
             // If a route already exists in the state, redraw it on the new style
             if (state.currentRoute) {
                 displayColoredRoute(state.currentRoute.coordinates);
