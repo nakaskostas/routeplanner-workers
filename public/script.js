@@ -1227,7 +1227,7 @@
             const widgetHtml = `
                 <div class="map-style-container ${wasVisible ? 'menu-visible' : ''}">
                     ${activeItemHtml}
-                    <div class="map-style-menu">
+                    <div class="map-style-menu glass-panel">
                         ${menuItemsHtml}
                     </div>
                 </div>
