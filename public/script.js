@@ -1024,6 +1024,13 @@
                 isDragging = false; // Reset flag on mousedown
                 e = e || window.event;
                 e.preventDefault();
+
+                // If the element is positioned with 'right', convert it to 'left' on first drag
+                if (elmnt.style.right && !elmnt.style.left) {
+                    elmnt.style.left = elmnt.offsetLeft + 'px';
+                    elmnt.style.right = 'auto';
+                }
+
                 // get the mouse cursor position at startup: 
                 pos3 = e.clientX;
                 pos4 = e.clientY;
@@ -1312,11 +1319,11 @@
 
             state.map.on('load', () => {
                 // Add standard controls to the top-left corner.
-                state.map.addControl(new maptilersdk.NavigationControl(), 'top-left');
-                state.map.addControl(new maptilersdk.TerrainControl({
-                    source: 'terrainSource', // Source is added in reapplyCustomMapElements
-                    exaggeration: 1.5
-                }), 'top-left');
+                // state.map.addControl(new maptilersdk.NavigationControl(), 'top-left');
+                // state.map.addControl(new maptilersdk.TerrainControl({
+                //     source: 'terrainSource', // Source is added in reapplyCustomMapElements
+                //     exaggeration: 1.5
+                // }), 'top-left');
 
                 // Initialize all our custom data sources and layers
                 reapplyCustomMapElements();
@@ -1428,6 +1435,57 @@
                 }
             });
 
+            // --- CUSTOM MAP CONTROLS ---
+            document.getElementById('custom-zoom-in').addEventListener('click', () => {
+                state.map.zoomIn();
+            });
+            document.getElementById('custom-zoom-out').addEventListener('click', () => {
+                state.map.zoomOut();
+            });
+            document.getElementById('custom-reset-bearing').addEventListener('click', () => {
+                state.map.easeTo({ bearing: 0, pitch: 0 });
+            });
+            const terrainButton = document.getElementById('custom-toggle-terrain');
+            terrainButton.addEventListener('click', () => {
+                if (state.map.getTerrain()) {
+                    state.map.disableTerrain();
+                } else {
+                    state.map.enableTerrain(1.5);
+                }
+            });
+            
+            // Listen for the terrain event to update the button's active state
+            state.map.on('terrain', (e) => {
+                const terrainButton = document.getElementById('custom-toggle-terrain');
+                if (e.terrain) { // e.terrain is true when terrain is enabled
+                    terrainButton.classList.add('active');
+                } else {
+                    terrainButton.classList.remove('active');
+                }
+            });
+
+            // Round Trip and Steep Uphill Toggles
+            const roundTripButton = document.getElementById('custom-round-trip');
+            const roundTripToggle = document.getElementById('roundTripToggle');
+            const steepUphillButton = document.getElementById('custom-steep-uphill');
+            const steepUphillToggle = document.getElementById('steepUphillToggle');
+
+            roundTripButton.addEventListener('click', () => {
+                roundTripToggle.click();
+            });
+
+            steepUphillButton.addEventListener('click', () => {
+                steepUphillToggle.click();
+            });
+
+            roundTripToggle.addEventListener('change', (e) => {
+                roundTripButton.classList.toggle('active', e.target.checked);
+            });
+
+            steepUphillToggle.addEventListener('change', (e) => {
+                steepUphillButton.classList.toggle('active', e.target.checked);
+            });
+
             // --- SEARCH FUNCTIONALITY ---
             const searchInput = document.getElementById('search-input');
             const suggestionsList = document.getElementById('search-suggestions');
@@ -1469,19 +1527,17 @@
             // Menu toggle functionality
             const menuToggle = document.getElementById('menuToggle');
             const menuPanel = document.getElementById('menuPanel');
-            const menuIcon = document.getElementById('menuIcon');
-            const closeIcon = document.getElementById('closeIcon');
+            const menu_svg = '<svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z"/></svg>';
+            const close_svg = '<svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>';
             
             menuToggle.addEventListener('click', () => {
                 const isHidden = menuPanel.classList.contains('menu-hidden');
                 if (isHidden) {
                     menuPanel.classList.remove('menu-hidden');
-                    menuIcon.classList.add('hidden');
-                    closeIcon.classList.remove('hidden');
+                    menuToggle.innerHTML = close_svg;
                 } else {
                     menuPanel.classList.add('menu-hidden');
-                    menuIcon.classList.remove('hidden');
-                    closeIcon.classList.add('hidden');
+                    menuToggle.innerHTML = menu_svg;
                 }
             });
 
@@ -1665,7 +1721,23 @@
                 state.isAddressPanelVisible = false;
             });
 
+            // Left panel toggle
+            const leftPanelContainer = document.getElementById('left-controls-container');
+            const toggleLeftPanelButton = document.getElementById('toggle-left-panel-button');
+            const left_arrow_svg = '<svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z"/></svg>';
+            const right_arrow_svg = '<svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z"/></svg>';
 
+            toggleLeftPanelButton.addEventListener('click', () => {
+                leftPanelContainer.classList.toggle('is-collapsed');
+                const isCollapsed = leftPanelContainer.classList.contains('is-collapsed');
+                if (isCollapsed) {
+                    toggleLeftPanelButton.innerHTML = right_arrow_svg;
+                    toggleLeftPanelButton.title = 'Εμφάνιση πίνακα';
+                } else {
+                    toggleLeftPanelButton.innerHTML = left_arrow_svg;
+                    toggleLeftPanelButton.title = 'Απόκρυψη πίνακα';
+                }
+            });
         }
     
         
@@ -1717,6 +1789,7 @@
                 redrawFromState();
                 updateUndoButton();
                 setTimeout(adjustPanelHeightForContent, 50);
+                syncCustomToggleButtons();
             }
 
             function redrawFromState() {
@@ -2788,13 +2861,13 @@
                                                     state.markers.forEach(marker => marker.remove());
                                                     state.markers = [];
                                                     state.pins = [];
-                                                    document.getElementById('roundTripToggle').checked = false;
-                                                    state.isRoundTrip = false;
-                                                    document.getElementById('steepUphillToggle').checked = false;
-                                                    state.showSteepHighlight = false;
-                                                    
-                                                    // Reset route name state
-                                                    state.routeName = '';
+                                                                        document.getElementById('roundTripToggle').checked = false;
+                                                                        state.isRoundTrip = false;
+                                                                        document.getElementById('steepUphillToggle').checked = false;
+                                                                        state.showSteepHighlight = false;
+                                                                        syncCustomToggleButtons();
+                                                                        
+                                                                        // Reset route name state                                                    state.routeName = '';
                                                     state.isRouteNameUserModified = false;
                                                     generateDefaultRouteName();
                     
@@ -2934,6 +3007,20 @@
         }
 
 
+
+        function syncCustomToggleButtons() {
+            const roundTripButton = document.getElementById('custom-round-trip');
+            const roundTripToggle = document.getElementById('roundTripToggle');
+            const steepUphillButton = document.getElementById('custom-steep-uphill');
+            const steepUphillToggle = document.getElementById('steepUphillToggle');
+
+            if (roundTripButton && roundTripToggle) {
+                roundTripButton.classList.toggle('active', roundTripToggle.checked);
+            }
+            if (steepUphillButton && steepUphillToggle) {
+                steepUphillButton.classList.toggle('active', steepUphillToggle.checked);
+            }
+        }
 
         function showLoading(show) {
             document.getElementById('topRightLoader').classList.toggle('hidden', !show);
