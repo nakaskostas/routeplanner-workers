@@ -297,6 +297,7 @@
                             const elementsToHide = [
                                 document.getElementById('menuPanel'),
                                 document.getElementById('topRightControls'),
+                                document.getElementById('topRightLoader'),
                                 document.getElementById('addressToggleContainer'),
                                 document.getElementById('addressPanel'),
                                 document.getElementById('instructions'),
