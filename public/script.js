@@ -294,20 +294,20 @@
             reportElement.style.backgroundColor = '#fff';
             document.body.appendChild(reportElement);
 
-            const elementsToHide = [
-                document.getElementById('menuPanel'),
-                document.getElementById('topRightControls'),
-                document.getElementById('addressToggleContainer'),
-                document.getElementById('addressPanel'),
-                document.getElementById('instructions'),
-                document.getElementById('messageOverlay'),
-                document.getElementById('contextMenu'),
-                document.getElementById('hide-panel-button'),
-                document.getElementById('show-panel-button'),
-                document.getElementById('map-style-switcher'), // Hide map style switcher
-                ...document.querySelectorAll('.maptiler-control-container, .maplibregl-control-container')
-            ];
-            const originalDisplays = new Map();
+                            const elementsToHide = [
+                                document.getElementById('menuPanel'),
+                                document.getElementById('topRightControls'),
+                                document.getElementById('addressToggleContainer'),
+                                document.getElementById('addressPanel'),
+                                document.getElementById('instructions'),
+                                document.getElementById('messageOverlay'),
+                                document.getElementById('contextMenu'),
+                                document.getElementById('hide-panel-button'),
+                                document.getElementById('show-panel-button'),
+                                document.getElementById('map-style-switcher'), // Hide map style switcher
+                                document.getElementById('left-controls-container'),
+                                ...document.querySelectorAll('.maptiler-control-container, .maplibregl-control-container')
+                            ];            const originalDisplays = new Map();
             const bottomPanel = document.getElementById('bottomPanel');
 
             try {
