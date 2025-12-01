@@ -1464,28 +1464,6 @@
                 }
             });
 
-            // Round Trip and Steep Uphill Toggles
-            const roundTripButton = document.getElementById('custom-round-trip');
-            const roundTripToggle = document.getElementById('roundTripToggle');
-            const steepUphillButton = document.getElementById('custom-steep-uphill');
-            const steepUphillToggle = document.getElementById('steepUphillToggle');
-
-            roundTripButton.addEventListener('click', () => {
-                roundTripToggle.click();
-            });
-
-            steepUphillButton.addEventListener('click', () => {
-                steepUphillToggle.click();
-            });
-
-            roundTripToggle.addEventListener('change', (e) => {
-                roundTripButton.classList.toggle('active', e.target.checked);
-            });
-
-            steepUphillToggle.addEventListener('change', (e) => {
-                steepUphillButton.classList.toggle('active', e.target.checked);
-            });
-
             // --- SEARCH FUNCTIONALITY ---
             const searchInput = document.getElementById('search-input');
             const suggestionsList = document.getElementById('search-suggestions');
@@ -1569,8 +1547,14 @@
             });
 
             // Toggles listeners
-            document.getElementById('roundTripToggle').addEventListener('change', handleRoundTripToggle);
-            document.getElementById('steepUphillToggle').addEventListener('change', handleSteepUphillToggle);
+            document.getElementById('roundTripToggle').addEventListener('change', (e) => {
+                document.querySelector('label[for="roundTripToggle"]').classList.toggle('active', e.target.checked);
+                handleRoundTripToggle(e);
+            });
+            document.getElementById('steepUphillToggle').addEventListener('change', (e) => {
+                document.querySelector('label[for="steepUphillToggle"]').classList.toggle('active', e.target.checked);
+                handleSteepUphillToggle(e);
+            });
 
                         window.addEventListener('resize', () => {
 
@@ -1789,7 +1773,6 @@
                 redrawFromState();
                 updateUndoButton();
                 setTimeout(adjustPanelHeightForContent, 50);
-                syncCustomToggleButtons();
             }
 
             function redrawFromState() {
@@ -2865,7 +2848,6 @@
                                                                         state.isRoundTrip = false;
                                                                         document.getElementById('steepUphillToggle').checked = false;
                                                                         state.showSteepHighlight = false;
-                                                                        syncCustomToggleButtons();
                                                                         
                                                                         // Reset route name state                                                    state.routeName = '';
                                                     state.isRouteNameUserModified = false;
@@ -3007,20 +2989,6 @@
         }
 
 
-
-        function syncCustomToggleButtons() {
-            const roundTripButton = document.getElementById('custom-round-trip');
-            const roundTripToggle = document.getElementById('roundTripToggle');
-            const steepUphillButton = document.getElementById('custom-steep-uphill');
-            const steepUphillToggle = document.getElementById('steepUphillToggle');
-
-            if (roundTripButton && roundTripToggle) {
-                roundTripButton.classList.toggle('active', roundTripToggle.checked);
-            }
-            if (steepUphillButton && steepUphillToggle) {
-                steepUphillButton.classList.toggle('active', steepUphillToggle.checked);
-            }
-        }
 
         function showLoading(show) {
             document.getElementById('topRightLoader').classList.toggle('hidden', !show);

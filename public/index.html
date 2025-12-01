@@ -42,12 +42,24 @@
                 <button id="custom-toggle-terrain" class="action-button w-12 h-12 flex items-center justify-center" title="Εναλλαγή εδάφους">
                     <svg class="w-6 h-6"  xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"  fill="currentColor"><path d="m40-240 240-320 180 240h300L560-586 460-454l-50-66 150-200 360 480H40Zm521-80Zm-361 0h160l-80-107-80 107Zm0 0h160-160Z"/></svg>
                 </button>
-                <button id="custom-round-trip" class="action-button w-12 h-12 flex items-center justify-center" title="Κυκλική διαδρομή">
-                    <svg class="w-6 h-6"  xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"  fill="currentColor"><path d="M280-120 80-320l200-200 57 56-104 104h607v80H233l104 104-57 56Zm400-320-57-56 104-104H120v-80h607L623-784l57-56 200 200-200 200Z"/></svg>
-                </button>
-                <button id="custom-steep-uphill" class="action-button w-12 h-12 flex items-center justify-center" title="Απότομη ανάβαση">
-                    <svg class="w-6 h-6"  xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"  fill="currentColor"><path d="m136-240-56-56 296-298 160 160 208-206H640v-80h240v240h-80v-104L536-320 376-480 136-240Z"/></svg>
-                </button>
+
+                <!-- Round Trip Toggle -->
+                <div class="relative">
+                    <input type="checkbox" id="roundTripToggle" class="sr-only peer">
+                    <label for="roundTripToggle" class="action-button w-12 h-12 flex items-center justify-center cursor-pointer" title="Κυκλική διαδρομή">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="M280-120 80-320l200-200 57 56-104 104h607v80H233l104 104-57 56Zm400-320-57-56 104-104H120v-80h607L623-784l57-56 200 200-200 200Z"/></svg>
+                    </label>
+                    <span class="sr-only">Κυκλική Διαδρομή</span>
+                </div>
+
+                <!-- Steep Uphill Toggle -->
+                <div class="relative">
+                    <input type="checkbox" id="steepUphillToggle" class="sr-only peer">
+                    <label for="steepUphillToggle" class="action-button w-12 h-12 flex items-center justify-center cursor-pointer" title="Απότομη ανάβαση">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="m136-240-56-56 296-298 160 160 208-206H640v-80h240v240h-80v-104L536-320 376-480 136-240Z"/></svg>
+                    </label>
+                    <span class="sr-only">Απότομη ανάβαση</span>
+                </div>
             </div>
             <button id="toggle-left-panel-button" class="action-button w-6 h-14 flex items-center justify-center" title="Απόκρυψη πίνακα">
                 <svg class="w-6 h-6"  xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"  fill="currentColor"><path d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z"/></svg>
@@ -311,30 +323,6 @@
                 </button>
             </div>
             
-            <!-- Round Trip Toggle -->
-            <div class="mt-4 pt-4 border-t border-gray-200">
-                <label for="roundTripToggle" class="flex items-center justify-between cursor-pointer">  
-                    <span class="font-medium text-gray-800">Κυκλική Διαδρομή</span>
-                    <div class="relative">
-                        <input type="checkbox" id="roundTripToggle" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-400 peer-checked:bg-blue-600"></div>
-                        <div class="absolute left-1 top-1 bg-white border-gray-300 border rounded-full h-4 w-4 transition-transform peer-checked:translate-x-full"></div>
-                    </div>
-                </label>
-            </div>
-
-            <!-- Steep Uphill Toggle -->
-            <div class="mt-4 pt-4 border-t border-gray-200">
-                <label for="steepUphillToggle" class="flex items-center justify-between cursor-pointer">
-                    <span class="font-medium text-gray-800">Απότομη ανάβαση</span>
-                    <div class="relative">
-                        <input type="checkbox" id="steepUphillToggle" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-400 peer-checked:bg-blue-600"></div>
-                        <div class="absolute left-1 top-1 bg-white border-gray-300 border rounded-full h-4 w-4 transition-transform peer-checked:translate-x-full"></div>
-                    </div>
-                </label>
-            </div>
-
             <!-- Share Button -->
             <div class="mt-4 pt-4 border-t border-gray-200">
                 <button id="shareButton" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors shadow-sm disabled:bg-indigo-300 disabled:cursor-not-allowed" disabled>
