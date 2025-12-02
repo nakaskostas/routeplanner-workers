@@ -1548,13 +1548,21 @@
             });
 
             // Toggles listeners
-            document.getElementById('roundTripToggle').addEventListener('change', (e) => {
-                document.querySelector('label[for="roundTripToggle"]').classList.toggle('active', e.target.checked);
-                handleRoundTripToggle(e);
+            document.getElementById('roundTripToggle').addEventListener('click', (e) => {
+                // Manually toggle the state
+                state.isRoundTrip = !state.isRoundTrip;
+                // Manually toggle the visual active class on the button
+                e.currentTarget.classList.toggle('active', state.isRoundTrip);
+                // Call the handler function, mocking the event object
+                handleRoundTripToggle({ target: { checked: state.isRoundTrip } });
             });
-            document.getElementById('steepUphillToggle').addEventListener('change', (e) => {
-                document.querySelector('label[for="steepUphillToggle"]').classList.toggle('active', e.target.checked);
-                handleSteepUphillToggle(e);
+            document.getElementById('steepUphillToggle').addEventListener('click', (e) => {
+                // Manually toggle the state
+                state.showSteepHighlight = !state.showSteepHighlight;
+                // Manually toggle the visual active class on the button
+                e.currentTarget.classList.toggle('active', state.showSteepHighlight);
+                // Call the handler function, mocking the event object
+                handleSteepUphillToggle({ target: { checked: state.showSteepHighlight } });
             });
 
                         window.addEventListener('resize', () => {
