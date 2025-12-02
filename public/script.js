@@ -1621,16 +1621,23 @@
                 // Reset the moved flag every time the panel is opened
                 state.isAddressPanelMoved = false;
 
-                // Reset panel size to default before showing
-                addressPanel.style.width = '';
-                addressPanel.style.height = '';
-
-                // Position the panel at the toggle's location, with edge correction
-                let newTop = state.lastTogglePosition.top;
-                let newLeft = state.lastTogglePosition.left;
-
+                // Temporarily show the panel to measure its dimensions correctly
+                addressPanel.style.visibility = 'hidden';
+                addressPanel.classList.remove('menu-hidden');
+                
                 const panelWidth = addressPanel.offsetWidth;
                 const panelHeight = addressPanel.offsetHeight;
+                
+                // Hide it again before calculating position
+                addressPanel.classList.add('menu-hidden');
+                addressPanel.style.visibility = 'visible';
+
+                // --- Position Calculation ---
+                let newTop = state.lastTogglePosition.top;
+                // Align top-right corner of panel with top-right corner of toggle button
+                let newLeft = state.lastTogglePosition.left + addressToggleContainer.offsetWidth - panelWidth;
+
+                // --- Boundary Checks ---
                 const viewportWidth = window.innerWidth;
                 const viewportHeight = window.innerHeight;
 
@@ -1671,10 +1678,10 @@
                         left: state.lastTogglePosition.left
                     };
                 } else {
-                    // If panel was moved, use the panel's current position
+                    // If panel was moved, use the panel's current top-right corner to position the toggle
                     targetPosition = {
                         top: addressPanel.offsetTop,
-                        left: addressPanel.offsetLeft
+                        left: addressPanel.offsetLeft + addressPanel.offsetWidth - addressToggleContainer.offsetWidth
                     };
                 }
 
