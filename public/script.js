@@ -1706,23 +1706,7 @@
                 state.isAddressPanelVisible = false;
             });
 
-            // Left panel toggle
-            const leftPanelContainer = document.getElementById('left-controls-container');
-            const toggleLeftPanelButton = document.getElementById('toggle-left-panel-button');
-            const left_arrow_svg = '<svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z"/></svg>';
-            const right_arrow_svg = '<svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z"/></svg>';
 
-            toggleLeftPanelButton.addEventListener('click', () => {
-                leftPanelContainer.classList.toggle('is-collapsed');
-                const isCollapsed = leftPanelContainer.classList.contains('is-collapsed');
-                if (isCollapsed) {
-                    toggleLeftPanelButton.innerHTML = right_arrow_svg;
-                    toggleLeftPanelButton.title = 'Εμφάνιση πίνακα';
-                } else {
-                    toggleLeftPanelButton.innerHTML = left_arrow_svg;
-                    toggleLeftPanelButton.title = 'Απόκρυψη πίνακα';
-                }
-            });
         }
     
         

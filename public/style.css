@@ -560,42 +560,14 @@
 #left-controls-container {
     position: absolute;
     top: 50%;
-    left: 0;
+    left: 1rem;
     transform: translateY(-50%);
     z-index: 2000;
-    display: flex;
-    align-items: center;
-    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-#left-controls-container.is-collapsed {
-    /* Translate the whole container left, but leave space for the button (w-6 = 1.5rem) + padding/border */
-    transform: translateY(-50%) translateX(calc(-100% + 1.7rem));
 }
 #custom-map-controls {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    padding: 0.5rem;
-    /* This panel has the glass effect */
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(200, 200, 200, 0.4);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    /* Rounded on the left, flat on the right */
-    border-top-left-radius: 0.5rem;
-    border-bottom-left-radius: 0.5rem;
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-}
-#toggle-left-panel-button {
-    padding: 0; /* Remove padding to respect w/h */
-    /* Flat on the left, rounded on the right */
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-    border-top-right-radius: 0.5rem;
-    border-bottom-right-radius: 0.5rem;
-    border-left-width: 0; /* Remove left border to merge with panel */
 }
 .action-button.active {
     box-shadow: 0 0 0 2px #3B82F6, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
