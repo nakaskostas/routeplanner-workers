@@ -559,9 +559,8 @@
 /* Custom Map Controls */
 #left-controls-container {
     position: absolute;
-    top: 50%;
+    top: 1rem;
     left: 1rem;
-    transform: translateY(-50%);
     z-index: 2000;
 }
 #custom-map-controls {
