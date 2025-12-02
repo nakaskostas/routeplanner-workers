@@ -588,7 +588,19 @@
 #clearRoute:active,
 #recalculateRoute:active,
 #undoButton:active,
-#addressToggle:active {
+#addressToggle:active,
+#addressPanelClose:active,
+#downloadGPX:active,
+#uploadGPX:active,
+#downloadPDF:active,
+#shareButton:active,
+#show-panel-button:active,
+#hide-panel-button:active,
+#addWaypointBtn:active,
+#removePinBtn:active,
+#pdf-open-confirm:active,
+#pdf-open-cancel:active,
+#editRouteNameBtn:active {
   transform: translateY(1px);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
