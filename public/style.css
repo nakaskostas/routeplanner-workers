@@ -577,6 +577,22 @@
     transform: translateY(-1px);
 }
 
+/* Pressed effect for specific action buttons */
+#custom-zoom-in:active,
+#custom-zoom-out:active,
+#custom-reset-bearing:active,
+#custom-toggle-terrain:active,
+label[for="roundTripToggle"]:active,
+label[for="steepUphillToggle"]:active,
+#menuToggle:active,
+#clearRoute:active,
+#recalculateRoute:active,
+#undoButton:active,
+#addressToggle:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 
 
 
