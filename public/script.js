@@ -520,6 +520,7 @@
             // Route Naming state
             routeName: '',
             isRouteNameUserModified: false,
+            hasUserManuallyClosedBottomPanel: false,
         };
 
         // --- ADDRESS PANEL LOGIC ---
@@ -1563,7 +1564,7 @@
 
             // Panel visibility buttons
             hidePanelButton.addEventListener('click', hideBottomPanel);
-            showPanelButton.addEventListener('click', showBottomPanel);
+            showPanelButton.addEventListener('click', () => showBottomPanel(true));
 
             // Event listeners for the elevation highlight marker
             const bottomPanelEl = document.getElementById('bottomPanel');
@@ -2037,6 +2038,7 @@
                         redrawFromState();
                         saveState();
                         showMessage(`Η διαδρομή από το αρχείο GPX φορτώθηκε με ${newPins.length} σημεία.`, 'success');
+                        showBottomPanel(true); // Force panel to show on GPX load
                         setTimeout(adjustPanelHeightForContent, 50);
 
                     } catch (error) {
@@ -2696,10 +2698,16 @@
                                 displayColoredRoute(routeCoordinates);
                                 displayElevationChart(sampledElevationData);
                                 updateStatsVisibility(true);
-                                showBottomPanel();
+                                if (!state.hasUserManuallyClosedBottomPanel) {
+                                    showBottomPanel();
+                                }
                             }
                                             // --- UI UPDATES & DISPLAY ---
-                                            function showBottomPanel() {
+                                            function showBottomPanel(isUserInitiated = false) {
+                                                if (isUserInitiated) {
+                                                    state.hasUserManuallyClosedBottomPanel = false;
+                                                }
+
                                                 if (!state.currentRoute) return;
                     
                                                 // Only trigger the shine animation if the panel is not already visible.
@@ -2723,6 +2731,7 @@
                                                 if (state.currentRoute) {
                                                     showPanelButton.classList.remove('hidden');
                                                 }
+                                                state.hasUserManuallyClosedBottomPanel = true;
                                             }
                                     
                                             function displayColoredRoute(routeCoordinates) {
@@ -2900,6 +2909,9 @@
                                                                         state.showSteepHighlight = false;
                                                                         updateToggleButtonsVisualState();
                                                                         
+                                                                        // Reset panel visibility state
+                                                                        state.hasUserManuallyClosedBottomPanel = false;
+
                                                                         // Reset route name state                                                    state.routeName = '';
                                                     state.isRouteNameUserModified = false;
                                                     generateDefaultRouteName();
