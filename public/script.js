@@ -1477,6 +1477,16 @@
             document.getElementById('custom-reset-bearing').addEventListener('click', () => {
                 state.map.easeTo({ bearing: 0, pitch: 0 });
             });
+            document.getElementById('custom-fit-bounds').addEventListener('click', () => {
+                if (state.currentRoute && state.currentRoute.coordinates.length > 0) {
+                    const geojsonCoordinates = state.currentRoute.coordinates.map(c => [c[1], c[0]]);
+                    const bounds = new maptilersdk.LngLatBounds(geojsonCoordinates[0], geojsonCoordinates[0]);
+                    for (const coord of geojsonCoordinates) {
+                        bounds.extend(coord);
+                    }
+                    state.map.fitBounds(bounds, { padding: 80, duration: 1000 });
+                }
+            });
             const terrainButton = document.getElementById('custom-toggle-terrain');
             terrainButton.addEventListener('click', () => {
                 if (state.map.getTerrain()) {
@@ -2785,15 +2795,14 @@
                                                     state.map.setPaintProperty('steepRouteLayer', 'line-opacity', state.showSteepHighlight ? 0.8 : 0);
                                                 }
                     
-                                                                                                 // 5. Zoom map to fit the route
-                                                                                                if (geojsonCoordinates.length > 0) {
-                                                                                                    const bounds = new maptilersdk.LngLatBounds(geojsonCoordinates[0], geojsonCoordinates[0]);
-                                                                                                    for (const coord of geojsonCoordinates) {
-                                                                                                        bounds.extend(coord);
-                                                                                                    }
-                                                                                                    state.map.fitBounds(bounds, { padding: 80, duration: 1000 });
-                                                                                                }
-                                                                                            }                                    
+                                                                                                                                                                                                     // 5. Zoom map to fit the route
+                                                                                                                                                                                                 /* if (geojsonCoordinates.length > 0) {
+                                                                                                                                                                                                     const bounds = new maptilersdk.LngLatBounds(geojsonCoordinates[0], geojsonCoordinates[0]);
+                                                                                                                                                                                                     for (const coord of geojsonCoordinates) {
+                                                                                                                                                                                                         bounds.extend(coord);
+                                                                                                                                                                                                     }
+                                                                                                                                                                                                     state.map.fitBounds(bounds, { padding: 80, duration: 1000 });
+                                                                                                                                                                                                 } */                                                                                            }                                    
                                             function updateRouteStats(data) {
                                                 const formatDistance = (d) => d > 1000 ? `${(d / 1000).toFixed(2)} km` : `${Math.round(d)} m`;
                                                 
@@ -3061,6 +3070,7 @@
             document.getElementById('recalculateRoute').disabled = !hasRoute;
             document.getElementById('downloadPDF').style.display = hasRoute ? 'flex' : 'none';
             document.getElementById('shareButton').disabled = !hasPins;
+            document.getElementById('custom-fit-bounds').disabled = !hasRoute;
             showPanelButton.classList.toggle('hidden', !hasRoute || bottomPanel.classList.contains('is-visible'));
             updateUndoButton();
         }
