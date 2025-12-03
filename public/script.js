@@ -2074,6 +2074,7 @@
                 if (state.pins.length >= 2) {
                     calculateRoute();
                 }
+                generateDefaultRouteName();
                 saveState();
                 updateUIState();
                 adjustPanelHeightForContent();
@@ -2207,6 +2208,7 @@
                         }
 
                         if (state.pins.length >= 2) calculateRoute();
+                        generateDefaultRouteName();
                         saveState();
                     }
                 });
@@ -2268,6 +2270,7 @@
                 } else if (!state.isRoundTrip) {
                     clearRoute(false);
                 }
+                generateDefaultRouteName();
                 saveState();
             }
 
