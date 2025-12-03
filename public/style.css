@@ -377,7 +377,7 @@
             left: 0;
             right: 0;
             text-align: center;
-            font-size: 0.75rem;
+            font-size: 0.625rem;
             font-weight: 600;
             color: white;
             padding: 0.25rem 0.125rem;
@@ -418,15 +418,9 @@
 .map-style-label > span {
     display: inline-block;
     transform: translateX(0);
-    transition: transform 1s ease-in-out;
 }
 
-.map-style-item.long-text:hover .map-style-label > span {
-    /* Translate left by an amount that should reveal the text.
-       We can adjust this value if it's too much or too little. */
-    transform: translateX(-20px); 
-    transition-delay: 0.5s; /* Add a longer delay on hover-in */
-}
+
 
 /* From Uiverse.io by Nawsome */ 
 .pl {

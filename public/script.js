@@ -1215,7 +1215,7 @@
 
             // Helper to generate a single item
             const createStyleItem = (style, is_active = false) => {
-                const longTextClass = (style.name === 'Τοπογραφικός' || style.name === 'Δορυφορικός') ? 'long-text' : '';
+                const longTextClass = (style.name === 'Τοπογραφικός' || style.name === 'Δορυφορικός' || style.name === 'Υβριδικός') ? 'long-text' : '';
                 const id_attr = is_active ? 'id="active-map-style"' : '';
                 return `
                     <button ${id_attr} class="map-style-item ${longTextClass}" data-style-name="${style.name}">
@@ -1242,6 +1242,37 @@
             `;
             
             container.innerHTML = widgetHtml;
+
+            // --- NEW: Dynamic Marquee Logic ---
+            container.querySelectorAll('.map-style-item.long-text').forEach(item => {
+                const label = item.querySelector('.map-style-label');
+                const span = label.querySelector('span');
+
+                item.addEventListener('mouseenter', () => {
+                    // Ensure the transform is reset before measuring
+                    span.style.transition = 'none';
+                    span.style.transform = 'translateX(0)';
+                    
+                    // Allow the browser a moment to apply the reset before we measure
+                    setTimeout(() => {
+                        const labelWidth = label.clientWidth;
+                        const spanWidth = span.scrollWidth;
+                        const scrollAmount = spanWidth - labelWidth;
+
+                        // Re-enable the transition
+                        span.style.transition = 'transform 0.8s ease-in-out 0.5s';
+
+                        if (scrollAmount > 0) {
+                            // Add a small buffer of 2px so the last letter doesn't touch the edge
+                                                    const effectiveScroll = scrollAmount + 4;
+                                                    span.style.transform = `translateX(-${effectiveScroll}px)`;                        }
+                    }, 50); // A small delay is sometimes needed
+                });
+
+                item.addEventListener('mouseleave', () => {
+                    span.style.transform = 'translateX(0)';
+                });
+            });
         }
 
         /**
