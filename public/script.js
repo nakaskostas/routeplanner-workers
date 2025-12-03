@@ -1760,6 +1760,19 @@
 
 
             
+            function updateToggleButtonsVisualState() {
+                const roundTripButton = document.getElementById('roundTripToggle');
+                const steepUphillButton = document.getElementById('steepUphillToggle');
+
+                if (roundTripButton) {
+                    roundTripButton.classList.toggle('active', state.isRoundTrip);
+                }
+
+                if (steepUphillButton) {
+                    steepUphillButton.classList.toggle('active', state.showSteepHighlight);
+                }
+            }
+
             // --- UNDO/HISTORY MANAGEMENT ---
             function saveState() {
                 if (state.historyIndex < state.history.length - 1) {
@@ -1798,8 +1811,7 @@
                 state.isRoundTrip = snapshot.isRoundTrip;
                 state.showSteepHighlight = snapshot.showSteepHighlight ?? false;
                 
-                document.getElementById('roundTripToggle').checked = state.isRoundTrip;
-                document.getElementById('steepUphillToggle').checked = state.showSteepHighlight;
+                updateToggleButtonsVisualState();
                 
                 redrawFromState();
                 updateUndoButton();
@@ -2875,10 +2887,9 @@
                                                     state.markers.forEach(marker => marker.remove());
                                                     state.markers = [];
                                                     state.pins = [];
-                                                                        document.getElementById('roundTripToggle').checked = false;
                                                                         state.isRoundTrip = false;
-                                                                        document.getElementById('steepUphillToggle').checked = false;
                                                                         state.showSteepHighlight = false;
+                                                                        updateToggleButtonsVisualState();
                                                                         
                                                                         // Reset route name state                                                    state.routeName = '';
                                                     state.isRouteNameUserModified = false;
