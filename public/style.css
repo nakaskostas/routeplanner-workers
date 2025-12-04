@@ -112,7 +112,7 @@
             right: 1rem;
             z-index: 2000;
             padding: 1rem;
-            min-width: 300px;
+            min-width: 18.75rem;
         }
         
         .menu-hidden {
@@ -298,21 +298,15 @@
 
 
 
-        /* --- FONT SCALING FOR LARGE DISPLAYS --- */
-        @media (min-width: 1920px) {
-            html {
-                font-size: 17px; /* Base is 16px, this is ~6% larger */
-            }
-        }
-        @media (min-width: 2560px) {
-            html {
-                font-size: 18px; /* This is ~12.5% larger */
-            }
-        }
-        @media (min-width: 3840px) {
-            html {
-                font-size: 20px; /* This is 25% larger */
-            }
+        /* --- FONT SCALING FOR ALL DISPLAYS --- */
+        html {
+            /* 
+            This formula provides a base font size and adds a scaling factor 
+            based on the viewport width. This allows for better scaling on all
+            screen sizes, with improved readability on very small screens.
+            The base size has been adjusted to make the overall UI smaller.
+            */
+            font-size: calc(5px + 0.5vw);
         }
 
         /* Shine effect for bottomPanel */
@@ -605,3 +599,29 @@
 
 
 
+
+
+
+/* --- RESPONSIVE MAP STYLE SWITCHER --- */
+@media (max-width: 520px) {
+    .map-style-menu {
+        /* Position it below the main button */
+        top: 100%;
+        left: 0;
+        
+        /* Stack items vertically */
+        flex-direction: column;
+        
+        /* Adjust transform for vertical animation */
+        transform: translateY(-10px);
+
+        /* Add a small margin on top and ensure no horizontal offset */
+        margin-top: 0.5rem; 
+        margin-left: 0 !important; /* Override ml-2 class */
+    }
+
+    .map-style-container.menu-visible .map-style-menu {
+        /* Adjust transform for vertical animation */
+        transform: translateY(0);
+    }
+}

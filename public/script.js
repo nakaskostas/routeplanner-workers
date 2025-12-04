@@ -296,9 +296,8 @@
 
                             const elementsToHide = [
                                 document.getElementById('menuPanel'),
-                                document.getElementById('topRightControls'),
+                                document.getElementById('top-right-container'),
                                 document.getElementById('topRightLoader'),
-                                document.getElementById('addressToggleContainer'),
                                 document.getElementById('addressPanel'),
                                 document.getElementById('instructions'),
                                 document.getElementById('messageOverlay'),
@@ -1009,11 +1008,9 @@
         function initializeDraggableElements() {
             const addressPanel = document.getElementById('addressPanel');
             const addressPanelHeader = document.getElementById('addressPanelHeader');
-            const addressToggleContainer = document.getElementById('addressToggleContainer');
             const resizeHandle = document.getElementById('resizeHandle');
 
             makeDraggable(addressPanel, addressPanelHeader);
-            makeDraggable(addressToggleContainer, addressToggleContainer);
             makeResizable(addressPanel, resizeHandle);
         }
 
@@ -1086,8 +1083,9 @@
         function makeResizable(elmnt, handle) {
             let initialWidth = 0, initialHeight = 0;
             let initialX = 0, initialY = 0;
-            const minWidth = 280;
-            const minHeight = 200;
+            const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+            const minWidth = 17.5 * rootFontSize; // 280px at 16px base
+            const minHeight = 12.5 * rootFontSize; // 200px at 16px base
 
             handle.onmousedown = resizeMouseDown;
 
@@ -1658,47 +1656,19 @@
             const addressPanelClose = document.getElementById('addressPanelClose');
 
             addressToggle.addEventListener('click', () => {
-                if (isDragging) { // This check is crucial
-                    isDragging = false; // Reset flag for next interaction
-                    return; // This was a drag, not a click. Ignore.
-                }
+                const addressPanel = document.getElementById('addressPanel');
+                const addressToggleContainer = document.getElementById('addressToggleContainer');
 
-                // Store the toggle's current position before showing the panel
-                state.lastTogglePosition = {
-                    top: addressToggleContainer.offsetTop,
-                    left: addressToggleContainer.offsetLeft
-                };
-                // Reset the moved flag every time the panel is opened
-                state.isAddressPanelMoved = false;
-
-                // Temporarily show the panel to measure its dimensions correctly
-                addressPanel.style.visibility = 'hidden';
-                addressPanel.classList.remove('menu-hidden');
-                
+                // Position panel near the toggle button, but don't let it go off-screen
+                const toggleRect = addressToggleContainer.getBoundingClientRect();
                 const panelWidth = addressPanel.offsetWidth;
-                const panelHeight = addressPanel.offsetHeight;
                 
-                // Hide it again before calculating position
-                addressPanel.classList.add('menu-hidden');
-                addressPanel.style.visibility = 'visible';
+                let newTop = toggleRect.bottom + window.scrollY + 5; // 5px gap
+                let newLeft = toggleRect.right + window.scrollX - panelWidth;
 
-                // --- Position Calculation ---
-                let newTop = state.lastTogglePosition.top;
-                // Align top-right corner of panel with top-right corner of toggle button
-                let newLeft = state.lastTogglePosition.left + addressToggleContainer.offsetWidth - panelWidth;
-
-                // --- Boundary Checks ---
-                const viewportWidth = window.innerWidth;
-                const viewportHeight = window.innerHeight;
-
-                if (newLeft + panelWidth > viewportWidth) {
-                    newLeft = viewportWidth - panelWidth;
-                }
-                if (newTop + panelHeight > viewportHeight) {
-                    newTop = viewportHeight - panelHeight;
-                }
-                if (newLeft < 0) newLeft = 0;
-                if (newTop < 0) newTop = 0;
+                // Boundary checks
+                if (newLeft < 0) newLeft = 5;
+                if (newTop < 0) newTop = 5;
 
                 addressPanel.style.top = newTop + 'px';
                 addressPanel.style.left = newLeft + 'px';
@@ -1706,55 +1676,17 @@
                 // Show panel, hide toggle button
                 addressPanel.classList.remove('menu-hidden');
                 addressToggleContainer.classList.add('hidden');
-
                 state.isAddressPanelVisible = true;
                 renderAddressList();
-                // Use a short timeout to allow the browser to render the panel
-                // before calculating its height.
                 setTimeout(() => {
-                    // First, auto-adjust the panel height based on content (up to 5 items)
                     adjustPanelHeightForContent();
-                    // Then, ensure the inner list's max-height is correct for the new panel height
                     updateAddressListHeight();
                 }, 50);
             });
 
             addressPanelClose.addEventListener('click', () => {
-                let targetPosition;
-                // If panel was not moved, use the toggle's last saved position
-                if (!state.isAddressPanelMoved) {
-                    targetPosition = {
-                        top: state.lastTogglePosition.top,
-                        left: state.lastTogglePosition.left
-                    };
-                } else {
-                    // If panel was moved, use the panel's current top-right corner to position the toggle
-                    targetPosition = {
-                        top: addressPanel.offsetTop,
-                        left: addressPanel.offsetLeft + addressPanel.offsetWidth - addressToggleContainer.offsetWidth
-                    };
-                }
-
-                // Position the toggle at the target location, with edge correction
-                let newLeft = targetPosition.left;
-                let newTop = targetPosition.top;
-
-                const toggleWidth = addressToggleContainer.offsetWidth;
-                const toggleHeight = addressToggleContainer.offsetHeight;
-                const viewportWidth = window.innerWidth;
-                const viewportHeight = window.innerHeight;
-
-                if (newLeft + toggleWidth > viewportWidth) {
-                    newLeft = viewportWidth - toggleWidth;
-                }
-                if (newTop + toggleHeight > viewportHeight) {
-                    newTop = viewportHeight - toggleHeight;
-                }
-                if (newLeft < 0) newLeft = 0;
-                if (newTop < 0) newTop = 0;
-                
-                addressToggleContainer.style.left = newLeft + 'px';
-                addressToggleContainer.style.top = newTop + 'px';
+                const addressPanel = document.getElementById('addressPanel');
+                const addressToggleContainer = document.getElementById('addressToggleContainer');
 
                 // Hide panel, show toggle button
                 addressPanel.classList.add('menu-hidden');
