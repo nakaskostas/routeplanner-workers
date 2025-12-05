@@ -1024,12 +1024,15 @@
                 e = e || window.event;
                 e.preventDefault();
 
-                // If the element is positioned with 'right', convert it to 'left' on first drag
-                if (elmnt.style.right && !elmnt.style.left) {
+                // *** FIX for drag jump ***
+                // If inline styles are not set, lock them to the current computed position before dragging.
+                // This ensures the rest of the function has a reliable starting point.
+                if (!elmnt.style.top || !elmnt.style.left) {
+                    elmnt.style.top = elmnt.offsetTop + 'px';
                     elmnt.style.left = elmnt.offsetLeft + 'px';
-                    elmnt.style.right = 'auto';
+                    elmnt.style.right = 'auto'; // Remove CSS-based positioning
                 }
-
+                
                 // get the mouse cursor position at startup: 
                 pos3 = e.clientX;
                 pos4 = e.clientY;
@@ -1650,32 +1653,27 @@
             });
 
             // Address Panel listeners
-            const addressToggleContainer = document.getElementById('addressToggleContainer');
             const addressToggle = document.getElementById('addressToggle');
             const addressPanel = document.getElementById('addressPanel');
             const addressPanelClose = document.getElementById('addressPanelClose');
 
             addressToggle.addEventListener('click', () => {
-                const addressPanel = document.getElementById('addressPanel');
-                const addressToggleContainer = document.getElementById('addressToggleContainer');
+                // Calculate panel width from its rem value, as offsetWidth is 0 when hidden.
+                const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+                const panelWidthInRem = 20; // from the w-[20rem] class
+                const panelWidth = panelWidthInRem * rootFontSize;
 
-                // Position panel near the toggle button, but don't let it go off-screen
-                const toggleRect = addressToggleContainer.getBoundingClientRect();
-                const panelWidth = addressPanel.offsetWidth;
+                // Calculate position before showing
+                const toggleRect = addressToggle.getBoundingClientRect();
+
+                // Align top-right corner of panel with top-right of the toggle button
+                addressPanel.style.top = `${toggleRect.top + window.scrollY}px`;
+                addressPanel.style.left = `${toggleRect.right + window.scrollX - panelWidth}px`;
                 
-                let newTop = toggleRect.bottom + window.scrollY + 5; // 5px gap
-                let newLeft = toggleRect.right + window.scrollX - panelWidth;
-
-                // Boundary checks
-                if (newLeft < 0) newLeft = 5;
-                if (newTop < 0) newTop = 5;
-
-                addressPanel.style.top = newTop + 'px';
-                addressPanel.style.left = newLeft + 'px';
-
                 // Show panel, hide toggle button
                 addressPanel.classList.remove('menu-hidden');
-                addressToggleContainer.classList.add('hidden');
+                addressToggle.classList.add('hidden');
+                
                 state.isAddressPanelVisible = true;
                 renderAddressList();
                 setTimeout(() => {
@@ -1685,12 +1683,9 @@
             });
 
             addressPanelClose.addEventListener('click', () => {
-                const addressPanel = document.getElementById('addressPanel');
-                const addressToggleContainer = document.getElementById('addressToggleContainer');
-
                 // Hide panel, show toggle button
                 addressPanel.classList.add('menu-hidden');
-                addressToggleContainer.classList.remove('hidden');
+                addressToggle.classList.remove('hidden');
 
                 state.isAddressPanelVisible = false;
             });
