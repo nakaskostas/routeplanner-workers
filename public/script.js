@@ -793,7 +793,7 @@
                 }
 
                 const isStart = index === 0;
-                let pinClass = 'pin-icon';
+                let pinClass = 'address-list-pin';
                 let pinContent = index + 1;
                 if (isStart) {
                     pinClass += ' start';
@@ -816,7 +816,7 @@
                 <div class="address-item flex items-center justify-between gap-3 p-2 rounded-md hover:bg-black/10" data-index="${index}">
                     <div class="flex items-center gap-3 cursor-pointer min-w-0">
                         <div class="flex-shrink-0">
-                            <div class="${pinClass}" style="width: 28px; height: 28px; font-size: 13px; line-height: 28px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">${pinContent}</div>
+                            <div class="${pinClass}">${pinContent}</div>
                         </div>
                         <div class="text-sm font-medium truncate ${isError ? 'text-red-600' : 'text-gray-800'}" title="${addressText}">${addressText}</div>
                     </div>
@@ -2192,6 +2192,7 @@
             function handleRoundTripToggle(e) {
                 state.isRoundTrip = e.target.checked;
                 updateFirstMarkerIcon();
+                renderAddressList();
                 if (state.pins.length >= 2) {
                     calculateRoute();
                 } else if (!state.isRoundTrip) {
