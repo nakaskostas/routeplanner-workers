@@ -1003,6 +1003,54 @@
             adjustPanelHeightForContent();
         }
 
+        /**
+         * Ensures the address panel stays within the viewport boundaries, especially after a window resize.
+         */
+        function keepAddressPanelInBounds() {
+            const elmnt = document.getElementById('addressPanel');
+            if (!elmnt || elmnt.classList.contains('menu-hidden')) {
+                return; // Do nothing if the panel is hidden
+            }
+
+            // Only act if the element has been positioned manually via style.top/left
+            if (!elmnt.style.top || !elmnt.style.left) {
+                return;
+            }
+
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            const elmntWidth = elmnt.offsetWidth;
+            const elmntHeight = elmnt.offsetHeight;
+
+            let currentTop = parseInt(elmnt.style.top, 10);
+            let currentLeft = parseInt(elmnt.style.left, 10);
+
+            let newLeft = currentLeft;
+            let newTop = currentTop;
+
+            // Check and adjust horizontal position
+            if (newLeft < 0) {
+                newLeft = 0;
+            } else if (newLeft + elmntWidth > viewportWidth) {
+                newLeft = viewportWidth - elmntWidth;
+            }
+
+            // Check and adjust vertical position
+            if (newTop < 0) {
+                newTop = 0;
+            } else if (newTop + elmntHeight > viewportHeight) {
+                newTop = viewportHeight - elmntHeight;
+            }
+
+            // Apply new position only if it changed
+            if (newLeft !== currentLeft) {
+                elmnt.style.left = newLeft + 'px';
+            }
+            if (newTop !== currentTop) {
+                elmnt.style.top = newTop + 'px';
+            }
+        }
+
         // --- DRAGGABLE ELEMENTS LOGIC ---
         let isDragging = false; // Flag to differentiate between a drag and a click
         function initializeDraggableElements() {
@@ -1609,23 +1657,18 @@
             });
 
                         window.addEventListener('resize', () => {
-
                             if (state.map) {
-
                                 setTimeout(() => state.map.resize(), 100);
-
                             }
 
                             if (state.elevationChart) {
-
                                 setTimeout(() => {
-
                                     state.elevationChart.resize();
-
                                 }, 150);
-
                             }
-
+                            
+                            // Keep address panel in bounds
+                            keepAddressPanelInBounds();
                         });
 
             
