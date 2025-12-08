@@ -1222,14 +1222,28 @@
             // Initial render
             renderMapStyleSwitcher();
 
-            // Setup event listeners for the container
-            const innerContainer = container.querySelector('.map-style-container');
-
             // Event listener for clicks (delegated)
             container.addEventListener('click', (e) => {
                 const target = e.target.closest('.map-style-item');
-                if (target && target.dataset.styleName) {
-                    handleMapStyleClick(target.dataset.styleName);
+                if (!target) return;
+
+                const styleName = target.dataset.styleName;
+                if (!styleName) return;
+                
+                const innerContainer = container.querySelector('.map-style-container');
+
+                // If the active style is clicked, toggle the menu
+                if (styleName === state.activeMapStyleName) {
+                    if (innerContainer) {
+                        innerContainer.classList.toggle('menu-visible');
+                        // If we are making it visible, we should clear the close timer
+                        if (innerContainer.classList.contains('menu-visible')) {
+                            clearTimeout(state.styleMenuCloseTimer);
+                        }
+                    }
+                } else {
+                    // If an inactive style is clicked, change the style
+                    handleMapStyleClick(styleName);
                 }
             });
 
@@ -1330,12 +1344,6 @@
          * @param {string} styleName The name of the style that was clicked.
          */
         function handleMapStyleClick(styleName) {
-            if (styleName === state.activeMapStyleName) {
-                // If the active style is clicked, do nothing.
-                // This could be used to just close the menu if it's sticky.
-                return;
-            }
-
             const selectedStyleData = state.mapStyleData.find(s => s.name === styleName);
             if (!selectedStyleData) return;
 
