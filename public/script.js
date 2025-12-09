@@ -475,8 +475,8 @@
         // --- CONFIGURATION ---
                 // --- CONFIGURATION ---
                 const CONFIG = {
-                    MAPTILER_PUBLIC_KEY: 'u8zRQYN6M4dzdhc7tvka', // <-- ΑΝΤΙΚΑΤΑΣΤΗΣΕ ΤΟ ΜΕ ΤΟ ΔΗΜΟΣΙΟ ΚΛΕΙΔΙ ΣΟΥ
-                    GRAPHHOPPER_PUBLIC_KEY: 'f9d9a046-0db0-48a8-a935-d44e62700a40', // <-- ΒΑΛΕ ΕΔΩ ΤΟ ΚΛΕΙΔΙ ΣΟΥ ΑΠΟ ΤΟ GRAPHHOPPER
+                    MAPTILER_PUBLIC_KEY: 'u8zRQYN6M4dzdhc7tvka', 
+                    GRAPHHOPPER_PUBLIC_KEY: 'f9d9a046-0db0-48a8-a935-d44e62700a40', 
                     ELEVATION_API_URL: '/api/open-elevation/lookup', // Use proxy
                     MAX_PINS: 40, // Number of Pins
                     DEFAULT_CENTER: [39.663967, 20.852770], // Ioannina, Greece
@@ -832,9 +832,12 @@
             listEl.querySelectorAll('.retry-address-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const indexToRetry = parseInt(e.target.dataset.index, 10);
-                    if (!isNaN(indexToRetry)) {
-                        fetchAddressForPin(indexToRetry, true); // force retry
+                    const button = e.target.closest('.retry-address-btn');
+                    if (button) {
+                        const indexToRetry = parseInt(button.dataset.index, 10);
+                        if (!isNaN(indexToRetry)) {
+                            fetchAddressForPin(indexToRetry, true); // force retry
+                        }
                     }
                 });
             });
@@ -2313,7 +2316,8 @@
                 // Regex to detect "lat, lon" or "lat lon" patterns
                 const coordRegex = /^\s*(-?\d{1,2}(\.\d+)?)\s*[, ]\s*(-?\d{1,3}(\.\d+)?)\s*$/;
                 const match = trimmedQuery.match(coordRegex);
-
+                
+                                
                 if (match) {
                     setSearchLoading(true);
                     try {
