@@ -327,6 +327,11 @@
             border-right: 2px solid rgba(0,0,0,0.3);
         }
 
+        .sortable-chosen {
+            background-color: #eff6ff; /* bg-blue-50 */
+            border: 1px solid #3B82F6; /* border-blue-500 */
+        }
+
 
 
         /* --- FONT SCALING FOR ALL DISPLAYS --- */

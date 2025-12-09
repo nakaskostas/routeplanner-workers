@@ -815,6 +815,9 @@
                 return `
                 <div class="address-item flex items-center justify-between gap-3 p-2 rounded-md hover:bg-black/10" data-index="${index}">
                     <div class="flex items-center gap-3 cursor-pointer min-w-0">
+                        <div class="flex-shrink-0 drag-handle-list cursor-move">
+                            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                        </div>
                         <div class="flex-shrink-0">
                             <div class="${pinClass}">${pinContent}</div>
                         </div>
@@ -1201,6 +1204,7 @@
             setupRouteNameEditing();
             initializeDraggableElements();
             initMapStyleSwitcher(); // New function for the map style widget
+            initSortableAddressList();
             
             if (!parseUrlAndRestore()) {
                 // saveState(); // TODO: Re-enable after refactoring saveState
@@ -1208,6 +1212,35 @@
             
             updateStatsVisibility(false);
             console.log('Εφαρμογή Σχεδιασμού Διαδρομής αρχικοποιήθηκε με MapTiler SDK.');
+        }
+
+        function initSortableAddressList() {
+            const listEl = document.getElementById('addressList');
+            new Sortable(listEl, {
+                animation: 150,
+                handle: '.drag-handle-list',
+                chosenClass: 'sortable-chosen',
+                onEnd: function (evt) {
+                    const { oldIndex, newIndex } = evt;
+
+                    if (oldIndex === newIndex) {
+                        return;
+                    }
+
+                    // Move the item in the state arrays
+                    const [movedPin] = state.pins.splice(oldIndex, 1);
+                    state.pins.splice(newIndex, 0, movedPin);
+
+                    const [movedAddress] = state.pinAddresses.splice(oldIndex, 1);
+                    state.pinAddresses.splice(newIndex, 0, movedAddress);
+
+                    // Redraw everything to reflect the new order
+                    redrawFromState();
+                    renderAddressList(); // Explicitly re-render the address list
+                    updateFirstMarkerIcon(); // Ensure the first marker's icon is updated
+                    saveState();
+                }
+            });
         }
 
         // --- NEW MAP STYLE SWITCHER LOGIC ---
