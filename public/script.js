@@ -1670,7 +1670,7 @@
                             state.highlightMarker = null;
                         }
                         markerRemovalTimer = null;
-                    }, 5000);
+                    }, 2000);
                 }
             });
 
