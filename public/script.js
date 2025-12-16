@@ -75,7 +75,8 @@
             const totalDistance = document.getElementById('totalDistance').textContent;
             const steepUphillDistance = document.getElementById('steepUphillDistance').textContent;
             const elevationGain = document.getElementById('elevationGain').textContent;
-            const routeName = (state.routeName && state.routeName !== '--') ? ` "${state.routeName}"` : '';
+            const routeNameDisplay = document.getElementById('routeName').textContent; // Get the displayed text from the DOM
+            const routeName = (routeNameDisplay && routeNameDisplay !== '--') ? ` "${routeNameDisplay}"` : '';
 
             return `
                 <h1 style="font-size: 24px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; text-align: center;">Αναφορά Διαδρομής${routeName}</h1>
@@ -256,6 +257,41 @@
             cancelBtn.addEventListener('click', hideDialog);
 
             // Show the dialog
+            dialog.classList.remove('hidden');
+        }
+
+        function showReverseConflictDialog(callback) {
+            const dialog = document.getElementById('reverse-conflict-dialog');
+            const newBtn = document.getElementById('reverse-conflict-new');
+            const continueBtn = document.getElementById('reverse-conflict-continue');
+            const cancelBtn = document.getElementById('reverse-conflict-cancel');
+
+            const cleanup = () => {
+                dialog.classList.add('hidden');
+                newBtn.removeEventListener('click', handleNew);
+                continueBtn.removeEventListener('click', handleContinue);
+                cancelBtn.removeEventListener('click', handleCancel);
+            };
+
+            const handleNew = () => {
+                cleanup();
+                callback('new');
+            };
+
+            const handleContinue = () => {
+                cleanup();
+                callback('continue');
+            };
+
+            const handleCancel = () => {
+                cleanup();
+                callback('cancel');
+            };
+
+            newBtn.addEventListener('click', handleNew);
+            continueBtn.addEventListener('click', handleContinue);
+            cancelBtn.addEventListener('click', handleCancel);
+
             dialog.classList.remove('hidden');
         }
 
@@ -520,6 +556,12 @@
             routeName: '',
             isRouteNameUserModified: false,
             hasUserManuallyClosedBottomPanel: false,
+            // Reverse Route State
+            isReverseModeActive: false,
+            normalRouteCache: null, // Stores the state of the normal route when in reverse mode
+            reversedRouteCache: null, // Stores the state of the reversed route when in normal mode
+            normalRouteDirty: false, // Flag to check if the normal route has been modified
+            preloadedReversedData: null, // Used for GPX import with a reversed route
         };
 
         // --- ADDRESS PANEL LOGIC ---
@@ -665,8 +707,27 @@
         function updateRouteNameUI() {
             const routeNameSpan = document.getElementById('routeName');
             if (routeNameSpan) {
-                routeNameSpan.textContent = state.routeName || '--';
-                routeNameSpan.title = state.routeName || 'Κάντε κλικ για επεξεργασία';
+                let finalName = state.routeName || '--';
+                const greekPrefix = '(Α)';
+                const latinPrefix = '(A)';
+
+                const trimmedName = finalName.trim();
+
+                // Check for either Greek or Latin prefix and strip it
+                if (trimmedName.startsWith(greekPrefix) || trimmedName.startsWith(latinPrefix)) {
+                    const closingParenIndex = trimmedName.indexOf(')');
+                    if (closingParenIndex !== -1) {
+                         finalName = trimmedName.substring(closingParenIndex + 1).trim();
+                    }
+                }
+
+                // If in reverse mode, always add the GREEK prefix
+                if (state.isReverseModeActive) {
+                    finalName = `${greekPrefix} ${finalName}`;
+                }
+
+                routeNameSpan.textContent = finalName;
+                routeNameSpan.title = finalName;
             }
         }
 
@@ -1700,6 +1761,9 @@
                 handleSteepUphillToggle({ target: { checked: state.showSteepHighlight } });
             });
 
+            document.getElementById('reverseRouteToggle').addEventListener('click', handleReverseRouteToggle);
+
+
                         window.addEventListener('resize', () => {
                             if (state.map) {
                                 setTimeout(() => state.map.resize(), 100);
@@ -1724,19 +1788,18 @@
                         // Event listener for the "Add Waypoint" button
 
                         document.getElementById('addWaypointBtn').addEventListener('click', () => {
-
                             if (rightClickLatLng && insertIndex !== -1) {
-                    addWaypoint(rightClickLatLng, insertIndex);
-                    document.getElementById('contextMenu').classList.add('hidden');
-                }
-            });
+                                addWaypoint(rightClickLatLng, insertIndex);
+                            }
+                            document.getElementById('contextMenu').classList.add('hidden');
+                        });
 
             // Event listener for the "Remove Pin" button
             document.getElementById('removePinBtn').addEventListener('click', () => {
                 if (rightClickedPinIndex !== -1) {
                     removePin(rightClickedPinIndex);
-                    document.getElementById('contextMenu').classList.add('hidden');
                 }
+                document.getElementById('contextMenu').classList.add('hidden');
             });
 
             // Address Panel listeners
@@ -1788,6 +1851,7 @@
             function updateToggleButtonsVisualState() {
                 const roundTripButton = document.getElementById('roundTripToggle');
                 const steepUphillButton = document.getElementById('steepUphillToggle');
+                const reverseRouteButton = document.getElementById('reverseRouteToggle');
 
                 if (roundTripButton) {
                     roundTripButton.classList.toggle('active', state.isRoundTrip);
@@ -1796,10 +1860,218 @@
                 if (steepUphillButton) {
                     steepUphillButton.classList.toggle('active', state.showSteepHighlight);
                 }
+
+                if(reverseRouteButton) {
+                    reverseRouteButton.classList.toggle('active', state.isReverseModeActive);
+                }
             }
+
+            /**
+             * Calculates route statistics from a given set of coordinates.
+             * @param {Array<Array<number>>} coordinates An array of [lat, lon, ele] points.
+             * @returns {object} An object containing { distance, elevationGain, elevationLoss, steepUphillDistance }.
+             */
+            function calculateStatsFromCoordinates(coordinates) {
+                if (!coordinates || coordinates.length < 2) {
+                    return { distance: 0, elevationGain: 0, elevationLoss: 0, steepUphillDistance: 0 };
+                }
+
+                let totalDistance = 0;
+                let elevationGain = 0;
+                let elevationLoss = 0;
+                let steepUphillDistance = 0;
+
+                for (let i = 1; i < coordinates.length; i++) {
+                    const p1 = coordinates[i - 1];
+                    const p2 = coordinates[i];
+                    
+                    const segmentDistance = calculateHaversineDistance(p1, p2);
+                    totalDistance += segmentDistance;
+
+                    const elevationDiff = (p2[2] || 0) - (p1[2] || 0);
+                    if (elevationDiff > 0) {
+                        elevationGain += elevationDiff;
+                    } else {
+                        elevationLoss += Math.abs(elevationDiff);
+                    }
+
+                    if (segmentDistance > 0) {
+                        const gradient = elevationDiff / segmentDistance;
+                        if (gradient > CONFIG.STEEP_GRADIENT_THRESHOLD && elevationDiff > 0) {
+                            steepUphillDistance += segmentDistance;
+                        }
+                    }
+                }
+
+                return { distance: totalDistance, elevationGain, elevationLoss, steepUphillDistance };
+            }
+
+            /**
+             * Redraws only the markers on the map based on the current state.pins.
+             */
+            function redrawMarkers() {
+                // Remove existing markers from the map
+                state.markers.forEach(marker => marker.remove());
+                state.markers = [];
+                
+                // Re-add markers based on the new state
+                state.pins.forEach((pin, index) => {
+                    addMarker(pin, index + 1);
+                });
+                updateFirstMarkerIcon();
+            }
+
+            function cloneRouteState() {
+                if (!state.currentRoute) return null;
+                // Deep copy of serializable parts of the state
+                return {
+                    pins: state.pins.map(p => ({ lng: p.lng, lat: p.lat })),
+                    currentRoute: JSON.parse(JSON.stringify(state.currentRoute)),
+                    currentElevation: JSON.parse(JSON.stringify(state.currentElevation)),
+                    pinAddresses: JSON.parse(JSON.stringify(state.pinAddresses)),
+                    isRoundTrip: state.isRoundTrip,
+                    routeName: state.routeName,
+                    isRouteNameUserModified: state.isRouteNameUserModified,
+                };
+            }
+
+            function restoreRouteState(cachedState) {
+                if (!cachedState) return;
+
+                // Restore state from the deep-copied cache
+                state.pins = cachedState.pins.map(p => new maptilersdk.LngLat(p.lng, p.lat));
+                state.currentRoute = cachedState.currentRoute;
+                state.currentElevation = cachedState.currentElevation;
+                state.pinAddresses = cachedState.pinAddresses;
+                state.isRoundTrip = cachedState.isRoundTrip || false; // Default to false if not present
+                state.routeName = cachedState.routeName;
+                state.isRouteNameUserModified = cachedState.isRouteNameUserModified;
+
+                // After restoring pinAddresses, fetch the actual addresses
+                if (state.pinAddresses) {
+                    state.pinAddresses.forEach((item, index) => {
+                        // We already have the LngLat, just need to fetch the address string
+                        if (item.status !== 'success') {
+                            fetchAddressForPin(index);
+                        }
+                    });
+                }
+
+                // Redraw all UI components to reflect the restored state
+                redrawMarkers();
+                renderAddressList();
+                
+                if (state.currentRoute) {
+                    displayColoredRoute(state.currentRoute.coordinates);                   
+                    displayElevationChart(state.currentElevation.data);
+                    updateRouteStats(state.currentRoute.stats);
+                    updateStatsVisibility(true); // Explicitly show stats
+                    showBottomPanel(); // Show the bottom panel
+                } else {
+                    clearRoute(false); // Clear map but don't save state
+                }
+
+                updateRouteNameUI();
+                updateToggleButtonsVisualState();
+                updateUIState(); // This is the key fix for buttons
+                updateUndoButton(); // History is not restored, so undo is disabled
+            }
+
+
+            function handleReverseRouteToggle() {
+
+                            // --- DEACTIVATING ---
+                            if (state.isReverseModeActive) {
+                                // Cache the current (reversed) route state before switching
+                                state.reversedRouteCache = cloneRouteState();
+                
+                                // IMPORTANT: Set reverse mode to false BEFORE restoring state
+                                // This ensures that when restoreRouteState calls updateRouteNameUI,
+                                // the '(A)' prefix is correctly removed.
+                                state.isReverseModeActive = false;
+                
+                                // Restore the normal route state from its cache
+                                restoreRouteState(state.normalRouteCache);
+                                
+                                // Update other state flags
+                                state.normalRouteDirty = false; // We are back to the clean normal route
+                                updateToggleButtonsVisualState();
+                                return;
+                            }
+                // --- ACTIVATING ---
+                if (!state.currentRoute || state.pins.length < 2) {
+                    showMessage('Δημιουργήστε μια διαδρομή με τουλάχιστον 2 σημεία για αντιστροφή.', 'error');
+                    return;
+                }
+
+                const activateReverseMode = (mode) => {
+                    state.isReverseModeActive = true;
+                    updateToggleButtonsVisualState();
+
+                    if (mode === 'continue') {
+                        state.normalRouteCache = cloneRouteState();
+                        const routeToRestore = state.reversedRouteCache || state.preloadedReversedData;
+                        restoreRouteState(routeToRestore);
+                        // Consume preloaded data after use
+                        if (state.preloadedReversedData) state.preloadedReversedData = null;
+                        state.normalRouteDirty = false;
+                        return;
+                    }
+
+                    if (mode === 'new') {
+                        state.normalRouteCache = cloneRouteState();
+                        
+                        state.pins.reverse();
+                        
+                        // Re-create pin addresses for the new order
+                        state.pinAddresses = state.pins.map(p => ({ status: 'empty', address: null, lngLat: p }));
+                        
+                        // Manually redraw UI for the new pin order *before* calculating the new route
+                        redrawMarkers();
+                        renderAddressList();
+                        
+                        // Fetch addresses for the newly ordered pins
+                        state.pinAddresses.forEach((_, index) => fetchAddressForPin(index));
+                        
+                        state.isRouteNameUserModified = false;
+                        calculateRoute();
+                        state.normalRouteDirty = false;
+                    }
+                };
+
+                // Conflict check
+                if (state.normalRouteDirty && (state.reversedRouteCache || state.preloadedReversedData)) {
+                    showReverseConflictDialog(choice => {
+                        if (choice === 'new') {
+                            activateReverseMode('new');
+                        } else if (choice === 'continue') {
+                            activateReverseMode('continue');
+                        }
+                        // If 'cancel', do nothing, just toggle the button back
+                        else {
+                            state.isReverseModeActive = false;
+                            updateToggleButtonsVisualState();
+                        }
+                    });
+                } 
+                // No conflict, but cached data exists
+                else if (state.reversedRouteCache || state.preloadedReversedData) {
+                    activateReverseMode('continue');
+                }
+                // No conflict, no cached data
+                else {
+                    activateReverseMode('new');
+                }
+            }
+
 
             // --- UNDO/HISTORY MANAGEMENT ---
             function saveState() {
+                // When any change happens that warrants saving, the normal route is now "dirty"
+                if (!state.isReverseModeActive) {
+                    state.normalRouteDirty = true;
+                }
+                
                 if (state.historyIndex < state.history.length - 1) {
                     state.history = state.history.slice(0, state.historyIndex + 1);
                 }
@@ -1848,6 +2120,9 @@
                 state.markers.forEach(marker => marker.remove());
                 state.markers = [];
                 
+                // Render the address list to reflect changes like reordering or removal
+                renderAddressList();
+
                 // Clear route data from sources
                 if (state.map.isStyleLoaded()) {
                     const routeSource = state.map.getSource('routeSource');
@@ -1947,67 +2222,100 @@
                 return false;
             }
 
+            function generateGpxTrack(trackData, trackType) {
+                if (!trackData || !trackData.currentRoute) return '';
+
+                const pins = trackData.pins.map(p => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`).join('|');
+                let trackName = trackData.routeName || (trackType === 'original' ? 'Normal Route' : 'Reversed Route');
+                if (trackType === 'reversed' && !trackName.startsWith('(A) ')) {
+                    trackName = `(A) ${trackName}`;
+                }
+
+                let track = ` <trk>
+<name>${trackName}</name>
+<extensions>
+    <webapp:type>${trackType}</webapp:type>
+    <webapp:pins>${pins}</webapp:pins>
+    <webapp:isRoundTrip>${trackData.isRoundTrip || false}</webapp:isRoundTrip>
+</extensions>
+<trkseg>
+`;
+                trackData.currentRoute.coordinates.forEach(coord => {
+                    track += `   <trkpt lat="${coord[0]}" lon="${coord[1]}"><ele>${coord[2] || 0}</ele></trkpt>\n`;
+                });
+                track += `  </trkseg>\n </trk>\n`;
+                return track;
+            }
+
             // --- GPX Import/Export ---
             function downloadGPX() {
-                if (state.pins.length === 0) {
+                if (!state.currentRoute || state.pins.length === 0) {
                     showMessage('Δεν υπάρχουν σημεία για εξαγωγή.', 'error');
                     return;
                 }
 
-                let gpx = `<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="WebApp Route Planner">
- <metadata>
-  <name>Διαδρομή από WebApp</name>
-  <time>${new Date().toISOString()}</time>
- </metadata>
+                const gpxHeader = `<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="WebApp Route Planner" xmlns:webapp="https://www.routeplanner.gr/gpx/extensions/v1">
+<metadata>
+<name>${state.routeName || 'Διαδρομή από WebApp'}</name>
+<time>${new Date().toISOString()}</time>
+</metadata>
 `;
+                let gpxTracks = '';
+                let fileName = `route_${new Date().toISOString().split('T')[0]}.gpx`;
 
-                // Add waypoints (user pins)
-                state.pins.forEach((pin, index) => {
-                    gpx += ` <wpt lat="${pin.lat}" lon="${pin.lng}">
-  <name>Pin ${index + 1}</name>
- </wpt>
-`;
-                });
+                // --- DUAL GPX EXPORT ---
+                const activeRouteState = cloneRouteState();
+                if (state.reversedRouteCache || state.isReverseModeActive) {
+                    const normalRouteData = state.isReverseModeActive ? state.normalRouteCache : activeRouteState;
+                    const reversedRouteData = state.isReverseModeActive ? activeRouteState : state.reversedRouteCache;
 
-                // Add track if a route is calculated
-                if (state.currentRoute && state.currentRoute.coordinates.length > 0) {
-                    gpx += ` <trk>
-  <name>Υπολογισμένη Διαδρομή</name>
-  <trkseg>
-`;
-                    state.currentRoute.coordinates.forEach(coord => {
-                        gpx += `   <trkpt lat="${coord[0]}" lon="${coord[1]}"><ele>${coord[2] || 0}</ele></trkpt>
+                    if (normalRouteData) {
+                        gpxTracks += generateGpxTrack(normalRouteData, 'original');
+                    }
+                    if (reversedRouteData) {
+                        gpxTracks += generateGpxTrack(reversedRouteData, 'reversed');
+                    }
+                    
+                    fileName = `route_${new Date().toISOString().split('T')[0]}_dual.gpx`;
+                    showMessage('Η λήψη του αρχείου GPX (με διπλή διαδρομή) ξεκίνησε.', 'success');
+                }
+                // --- STANDARD GPX EXPORT ---
+                else {
+                    // Add waypoints for standard export
+                    activeRouteState.pins.forEach((pin, index) => {
+                        gpxTracks += ` <wpt lat="${pin.lat}" lon="${pin.lng}">
+<name>Pin ${index + 1}</name>
+</wpt>
 `;
                     });
-                    gpx += `  </trkseg>
- </trk>
-`;
+                    gpxTracks += generateGpxTrack(activeRouteState, 'original');
+                    showMessage('Η λήψη του GPX ξεκίνησε.', 'success');
                 }
 
-                gpx += '</gpx>';
+                const fullGpx = gpxHeader + gpxTracks + '</gpx>';
+                triggerDownload(fullGpx, fileName);
+            }
 
-                const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+            function triggerDownload(content, fileName) {
+                const blob = new Blob([content], { type: 'application/gpx+xml' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `route_${new Date().toISOString().split('T')[0]}.gpx`;
+                a.download = fileName;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                showMessage('Η λήψη του GPX ξεκίνησε.', 'success');
             }
+
 
             function handleGpxFileUpload(event) {
                 const file = event.target.files[0];
-                if (!file) {
-                    return;
-                }
-
+                if (!file) return;
                 if (!file.name.toLowerCase().endsWith('.gpx')) {
                     showMessage('Παρακαλώ επιλέξτε ένα αρχείο GPX (.gpx).', 'error');
-                    event.target.value = ''; // Reset file input
+                    event.target.value = '';
                     return;
                 }
 
@@ -2022,44 +2330,138 @@
                             throw new Error("Μη έγκυρη δομή GPX.");
                         }
 
-                        const waypoints = xmlDoc.querySelectorAll('wpt');
-                        let newPins = [];
+                        clearRoute(true); // Clear everything before loading
 
-                        if (waypoints.length > 0) {
-                            for (let i = 0; i < waypoints.length; i++) {
-                                const lat = waypoints[i].getAttribute('lat');
-                                const lon = waypoints[i].getAttribute('lon');
-                                if (lat && lon) {
-                                    newPins.push(new maptilersdk.LngLat(parseFloat(lon), parseFloat(lat)));
+                        const tracks = xmlDoc.querySelectorAll('trk');
+                        const waypoints = xmlDoc.querySelectorAll('wpt');
+                        let parsedData = { original: null, reversed: null };
+                        let hasCustomData = false;
+
+                        tracks.forEach(track => {
+                            const typeNode = track.querySelector('extensions > webapp\\:type, extensions > type');
+                            const pinsNode = track.querySelector('extensions > webapp\\:pins, extensions > pins');
+                            const isRoundTripNode = track.querySelector('extensions > webapp\\:isRoundTrip, extensions > isRoundTrip');
+                            
+                            if (typeNode && pinsNode) {
+                                hasCustomData = true;
+                                const type = typeNode.textContent;
+                                if (type !== 'original' && type !== 'reversed') return;
+
+                                const pins = pinsNode.textContent.split('|').map(p => {
+                                    const coords = p.split(',');
+                                    return { lat: parseFloat(coords[0]), lng: parseFloat(coords[1]) };
+                                });
+
+                                const trackPoints = Array.from(track.querySelectorAll('trkpt')).map(pt => [
+                                    parseFloat(pt.getAttribute('lat')),
+                                    parseFloat(pt.getAttribute('lon')),
+                                    parseFloat(pt.querySelector('ele')?.textContent || 0)
+                                ]);
+                                
+                                const routeData = {
+                                    pins: pins,
+                                    currentRoute: {
+                                        coordinates: trackPoints,
+                                        stats: calculateStatsFromCoordinates(trackPoints)
+                                    },
+                                    pinAddresses: pins.map(p => ({ status: 'empty', address: null, lngLat: p })),
+                                    currentElevation: { data: [], coordinates: [] },
+                                    isRoundTrip: isRoundTripNode ? isRoundTripNode.textContent === 'true' : false,
+                                    routeName: track.querySelector('name')?.textContent || '',
+                                    isRouteNameUserModified: true // Assume it's user-defined from GPX
+                                };
+
+                                // Process elevation data for the chart
+                                let cumulativeDistance = 0;
+                                const elevationProfileData = trackPoints.map((point, index) => {
+                                     if (index > 0) {
+                                        cumulativeDistance += calculateHaversineDistance(trackPoints[index - 1], point);
+                                    }
+                                    return { distance: cumulativeDistance, elevation: point[2] };
+                                });
+                                routeData.currentElevation.data = elevationProfileData;
+                                routeData.currentElevation.coordinates = trackPoints;
+
+                                parsedData[type] = routeData;
+                            }
+                        });
+                        
+                        if (hasCustomData && parsedData.original) {
+                            // SIMPLIFIED LOGIC: To ensure the route is always drawn, we will now
+                            // just load the pins and then trigger the reliable `calculateRoute` function,
+                            // mimicking the behavior of a manual recalculation which is known to work.
+                            const originalData = parsedData.original;
+
+                            // 1. Set the pins from the file
+                            state.pins = originalData.pins.map(p => new maptilersdk.LngLat(p.lng, p.lat));
+                            
+                            // 2. Immediately create the address structure for the new pins
+                            state.pinAddresses = state.pins.map(p => ({ status: 'empty', address: null, lngLat: p }));
+
+                            // 3. Trigger fetching for all the new addresses
+                            state.pinAddresses.forEach((_, index) => {
+                                fetchAddressForPin(index);
+                            });
+
+                            // 3. Set other essential properties from the file before recalculating
+                            state.isRoundTrip = originalData.isRoundTrip || false;
+                            state.routeName = originalData.routeName || '';
+                            state.isRouteNameUserModified = true; // Assume name from file is intentional
+                            
+                            // 4. Redraw markers and update UI before the async calculation
+                            redrawMarkers();
+                            renderAddressList();
+                            updateRouteNameUI();
+                            updateToggleButtonsVisualState();
+
+                            // 5. Now, trigger the standard, reliable route calculation process
+                            calculateRoute(); 
+                            
+                            // 6. If a reversed route was also parsed, we still need to cache it for the toggle to work.
+                            if (parsedData.reversed) {
+                                state.reversedRouteCache = parsedData.reversed;
+                            }
+                            showMessage('Η διαδρομή από το αρχείο GPX φορτώνεται...', 'success');
+                        } else {
+                            // Fallback for standard GPX files
+                            let newPins = [];
+                            if (waypoints.length > 0) {
+                                waypoints.forEach(pt => {
+                                    newPins.push(new maptilersdk.LngLat(parseFloat(pt.getAttribute('lon')), parseFloat(pt.getAttribute('lat'))));
+                                });
+                            } else if (tracks.length > 0) {
+                                const trackPoints = tracks[0].querySelectorAll('trkpt');
+                                if (trackPoints.length > 0) {
+                                    newPins.push(new maptilersdk.LngLat(parseFloat(trackPoints[0].getAttribute('lon')), parseFloat(trackPoints[0].getAttribute('lat'))));
+                                    newPins.push(new maptilersdk.LngLat(parseFloat(trackPoints[trackPoints.length - 1].getAttribute('lon')), parseFloat(trackPoints[trackPoints.length - 1].getAttribute('lat'))));
+                                    if (waypoints.length === 0) showMessage('Δεν βρέθηκαν waypoints. Χρησιμοποιήθηκε η αρχή και το τέλος της διαδρομής.', 'warning');
                                 }
                             }
-                        }
+                            if (newPins.length === 0) throw new Error("Δεν βρέθηκαν σημεία (waypoints) στο αρχείο GPX.");
+                            state.pins = newPins;
+                            showMessage(`Η διαδρομή από το αρχείο GPX φορτώθηκε με ${newPins.length} σημεία.`, 'success');
 
-                        if (newPins.length === 0) {
-                            throw new Error("Δεν βρέθηκαν αποθηκευμένα pins (waypoints) στο αρχείο GPX.");
+                            if (state.pins.length > CONFIG.MAX_PINS) {
+                                showMessage(`Το αρχείο περιέχει ${state.pins.length} σημεία. Φορτώθηκαν τα πρώτα ${CONFIG.MAX_PINS}.`, 'warning');
+                                state.pins = state.pins.slice(0, CONFIG.MAX_PINS);
+                            }
+                            
+                            // Standard processing for the loaded pins
+                            state.pinAddresses = state.pins.map(p => ({ status: 'empty', address: null, lngLat: p }));
+                            calculateRoute(); // This will fetch route and addresses
                         }
                         
-                        if (newPins.length > CONFIG.MAX_PINS) {
-                            showMessage(`Το αρχείο περιέχει ${newPins.length} σημεία. Φορτώθηκαν τα πρώτα ${CONFIG.MAX_PINS}.`, 'warning');
-                            newPins = newPins.slice(0, CONFIG.MAX_PINS);
-                        }
-
-                        clearRoute(true); // Clear everything before loading
-                        state.pins = newPins;
-                        state.pinAddresses = state.pins.map(p => ({ status: 'empty', address: null, lngLat: p }));
-                        state.pinAddresses.forEach((_, index) => fetchAddressForPin(index));
-
-                        redrawFromState();
                         saveState();
-                        showMessage(`Η διαδρομή από το αρχείο GPX φορτώθηκε με ${newPins.length} σημεία.`, 'success');
-                        showBottomPanel(true); // Force panel to show on GPX load
+                        state.normalRouteDirty = false; // Loading from file is a "clean" state
+                        showBottomPanel(true);
                         setTimeout(adjustPanelHeightForContent, 50);
 
                     } catch (error) {
                         console.error("GPX parsing error:", error);
                         showMessage(`Σφάλμα κατά την επεξεργασία του αρχείου GPX: ${error.message}`, 'error');
+                        clearRoute(true);
                     } finally {
-                        event.target.value = '';
+                        event.target.value = ''; // Reset file input
                     }
                 };
                 reader.readAsText(file);
@@ -2233,18 +2635,13 @@
 
             function removePin(index) {
                 if (index < 0 || index >= state.pins.length) return;
-                
-                state.markers[index].remove();
+
+                // No need to remove marker from map manually, redrawFromState will handle it
                 state.pins.splice(index, 1);
                 state.pinAddresses.splice(index, 1); // Remove address
-                state.markers.splice(index, 1);
                 
-                renderAddressList(); // Update address list UI
-
-                // Re-draw everything to update numbers correctly
-                redrawFromState();
+                redrawFromState(); // This will remove old markers, re-add them with correct numbers, and recalculate route
                 saveState();
-                updateUIState();
             }
 
             function createNumberedIcon(number, isStart = false) {
@@ -2667,60 +3064,77 @@
             }
             
                             function processElevationData(routeCoordinates) {
-                                let cumulativeDistance = 0;
-                                let elevationGain = 0;
-                                let steepUphillDistance = 0;
-                                const elevationProfileData = [];
-                                
-                                routeCoordinates.forEach((point, index) => {
-                                    const elevation = point[2];
-                                    let isSteepSegment = false;
-                                    if (index > 0) {
-                                        const prevPoint = routeCoordinates[index - 1];
-                                        const segmentDistance = calculateHaversineDistance(prevPoint, point);
-                                        cumulativeDistance += segmentDistance;
-                    
-                                        const elevationDiff = elevation - (prevPoint[2] || 0);
-                                        if (elevationDiff > 0) elevationGain += elevationDiff;
-                    
-                                        // Check for steep uphill slope
-                                        if (segmentDistance > 0) {
-                                            const gradient = elevationDiff / segmentDistance;
-                                            if (gradient > CONFIG.STEEP_GRADIENT_THRESHOLD) {
-                                                isSteepSegment = true;
-                                                if (elevationDiff > 0) { // Only count uphill steep segments
-                                                    steepUphillDistance += segmentDistance;
-                                                }
-                                            }
-                                        }
-                                    }
-                                    elevationProfileData.push({ distance: cumulativeDistance, elevation: elevation, isSteep: isSteepSegment });
-                                });
-                    
-                                const maxChartPoints = 300;
-                                let sampledElevationData = elevationProfileData;
-                                let sampledRouteCoords = routeCoordinates;
-                    
-                                if (elevationProfileData.length > maxChartPoints) {
-                                    sampledElevationData = [];
-                                    sampledRouteCoords = [];
-                                    const step = Math.floor(elevationProfileData.length / maxChartPoints);
-                                    for (let i = 0; i < elevationProfileData.length; i += step) {
-                                        sampledElevationData.push(elevationProfileData[i]);
-                                        sampledRouteCoords.push(routeCoordinates[i]);
-                                    }
-                                }
-                    
-                                state.currentElevation = { data: sampledElevationData, coordinates: sampledRouteCoords };
-                    
-                                updateRouteStats({ distance: cumulativeDistance, elevationGain, steepUphillDistance });
-                                displayColoredRoute(routeCoordinates);
-                                displayElevationChart(sampledElevationData);
-                                updateStatsVisibility(true);
-                                if (!state.hasUserManuallyClosedBottomPanel) {
-                                    showBottomPanel();
+                let cumulativeDistance = 0;
+                let elevationGain = 0;
+                let elevationLoss = 0; // Added for potential future use
+                let steepUphillDistance = 0;
+                const elevationProfileData = [];
+                
+                routeCoordinates.forEach((point, index) => {
+                    const elevation = point[2];
+                    let isSteepSegment = false;
+                    if (index > 0) {
+                        const prevPoint = routeCoordinates[index - 1];
+                        const segmentDistance = calculateHaversineDistance(prevPoint, point);
+                        cumulativeDistance += segmentDistance;
+    
+                        const elevationDiff = elevation - (prevPoint[2] || 0);
+                        if (elevationDiff > 0) {
+                            elevationGain += elevationDiff;
+                        } else {
+                            elevationLoss += Math.abs(elevationDiff);
+                        }
+    
+                        // Check for steep uphill slope
+                        if (segmentDistance > 0) {
+                            const gradient = elevationDiff / segmentDistance;
+                            if (gradient > CONFIG.STEEP_GRADIENT_THRESHOLD) {
+                                isSteepSegment = true;
+                                if (elevationDiff > 0) { // Only count uphill steep segments
+                                    steepUphillDistance += segmentDistance;
                                 }
                             }
+                        }
+                    }
+                    elevationProfileData.push({ distance: cumulativeDistance, elevation: elevation, isSteep: isSteepSegment });
+                });
+    
+                const maxChartPoints = 300;
+                let sampledElevationData = elevationProfileData;
+                let sampledRouteCoords = routeCoordinates;
+    
+                if (elevationProfileData.length > maxChartPoints) {
+                    sampledElevationData = [];
+                    sampledRouteCoords = [];
+                    const step = Math.floor(elevationProfileData.length / maxChartPoints);
+                    for (let i = 0; i < elevationProfileData.length; i += step) {
+                        sampledElevationData.push(elevationProfileData[i]);
+                        sampledRouteCoords.push(routeCoordinates[i]);
+                    }
+                }
+    
+                state.currentElevation = { data: sampledElevationData, coordinates: sampledRouteCoords };
+                
+                // FIX: Consolidate stats and save them to the main state object
+                const newStats = { 
+                    distance: cumulativeDistance, 
+                    elevationGain, 
+                    elevationLoss, 
+                    steepUphillDistance 
+                };
+
+                if (state.currentRoute) {
+                    state.currentRoute.stats = newStats;
+                }
+    
+                updateRouteStats(newStats);
+                displayColoredRoute(routeCoordinates);
+                displayElevationChart(sampledElevationData);
+                updateStatsVisibility(true);
+                if (!state.hasUserManuallyClosedBottomPanel) {
+                    showBottomPanel();
+                }
+            }
                                             // --- UI UPDATES & DISPLAY ---
                                             function showBottomPanel(isUserInitiated = false) {
                                                 if (isUserInitiated) {
@@ -2822,15 +3236,7 @@
                                                 if (state.map.getLayer('steepRouteLayer')) {
                                                     state.map.setPaintProperty('steepRouteLayer', 'line-opacity', state.showSteepHighlight ? 0.8 : 0);
                                                 }
-                    
-                                                                                                                                                                                                     // 5. Zoom map to fit the route
-                                                                                                                                                                                                 /* if (geojsonCoordinates.length > 0) {
-                                                                                                                                                                                                     const bounds = new maptilersdk.LngLatBounds(geojsonCoordinates[0], geojsonCoordinates[0]);
-                                                                                                                                                                                                     for (const coord of geojsonCoordinates) {
-                                                                                                                                                                                                         bounds.extend(coord);
-                                                                                                                                                                                                     }
-                                                                                                                                                                                                     state.map.fitBounds(bounds, { padding: 80, duration: 1000 });
-                                                                                                                                                                                                 } */                                                                                            }                                    
+                                            }                                    
                                             function updateRouteStats(data) {
                                                 const formatDistance = (d) => d > 1000 ? `${(d / 1000).toFixed(2)} km` : `${Math.round(d)} m`;
                                                 
@@ -2924,14 +3330,22 @@
                                                     state.markers.forEach(marker => marker.remove());
                                                     state.markers = [];
                                                     state.pins = [];
-                                                                        state.isRoundTrip = false;
-                                                                        state.showSteepHighlight = false;
-                                                                        updateToggleButtonsVisualState();
-                                                                        
-                                                                        // Reset panel visibility state
-                                                                        state.hasUserManuallyClosedBottomPanel = false;
+                                                    state.isRoundTrip = false;
+                                                    state.showSteepHighlight = false;
+                                                    
+                                                    // Reset reverse route state completely
+                                                    state.isReverseModeActive = false;
+                                                    state.normalRouteCache = null;
+                                                    state.reversedRouteCache = null;
+                                                    state.normalRouteDirty = false;
 
-                                                                        // Reset route name state                                                    state.routeName = '';
+                                                    updateToggleButtonsVisualState();
+                                                                        
+                                                    // Reset panel visibility state
+                                                    state.hasUserManuallyClosedBottomPanel = false;
+
+                                                    // Reset route name state
+                                                    state.routeName = '';
                                                     state.isRouteNameUserModified = false;
                                                     generateDefaultRouteName();
                     
@@ -3107,7 +3521,14 @@
         }
         
         function updateUndoButton() {
-            document.getElementById('undoButton').disabled = state.historyIndex <= 0;
+            const isDisabled = state.historyIndex <= 0 || state.isReverseModeActive;
+            const undoButton = document.getElementById('undoButton');
+            undoButton.disabled = isDisabled;
+            if (state.isReverseModeActive) {
+                undoButton.title = "Η αναίρεση είναι απενεργοποιημένη σε λειτουργία αντίστροφης διαδρομής";
+            } else {
+                undoButton.title = "Αναίρεση";
+            }
         }
 
         function updateStatsVisibility(show) {

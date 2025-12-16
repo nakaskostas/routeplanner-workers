@@ -58,6 +58,11 @@
                 <button id="steepUphillToggle" class="action-button w-12 h-12 flex items-center justify-center cursor-pointer" title="Απότομη ανάβαση">
                     <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="m136-240-56-56 296-298 160 160 208-206H640v-80h240v240h-80v-104L536-320 376-480 136-240Z"/></svg>
                 </button>
+
+                <!-- Reverse Route Toggle -->
+                <button id="reverseRouteToggle" class="action-button w-12 h-12 flex items-center justify-center" title="Αντίστροφη διαδρομή">
+                    <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3L5 6.99h3V14h2V6.99h3L9 3z"/></svg>
+                </button>
             </div>
         </div>
         
@@ -418,6 +423,19 @@
             <div class="flex justify-center gap-4">
                 <button id="pdf-open-confirm" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Άνοιγμα</button>
                 <button id="pdf-open-cancel" class="px-6 py-2 bg-gray-200/80 text-gray-800 font-semibold rounded-md hover:bg-gray-300 transition-colors shadow-sm">Ακύρωση</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reverse Route Conflict Dialog -->
+    <div id="reverse-conflict-dialog" class="absolute inset-0 bg-black/30 z-[6000] flex items-center justify-center hidden" style="backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);">
+        <div class="rounded-lg shadow-xl p-6 w-full max-w-lg text-center bg-white/60 border border-white/30" style="backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);">
+            <h3 class="text-lg font-bold text-gray-900 mb-3">Εντοπίστηκε υπάρχουσα αντίστροφη διαδρομή</h3>
+            <p class="text-gray-800 font-medium mb-6">Έχετε τροποποιήσει την κανονική διαδρομή. Θέλετε να δημιουργήσετε μια νέα αντίστροφη διαδρομή με βάση τις αλλαγές σας ή να φορτώσετε την προηγούμενη που είχατε αποθηκεύσει;</p>
+            <div class="flex justify-center gap-4">
+                <button id="reverse-conflict-new" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Δημιουργία Νέας</button>
+                <button id="reverse-conflict-continue" class="px-6 py-2 bg-gray-500 text-white font-semibold rounded-md hover:bg-gray-600 transition-colors shadow-sm">Φόρτωση Παλιάς</button>
+                <button id="reverse-conflict-cancel" class="px-6 py-2 bg-gray-200/80 text-gray-800 font-semibold rounded-md hover:bg-gray-300 transition-colors shadow-sm">Ακύρωση</button>
             </div>
         </div>
     </div>
