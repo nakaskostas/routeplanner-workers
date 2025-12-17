@@ -708,9 +708,8 @@
             const routeNameSpan = document.getElementById('routeName');
             if (routeNameSpan) {
                 let finalName = state.routeName || '--';
-                const greekPrefix = '(Α)';
-                const latinPrefix = '(A)';
-
+                const greekPrefix = '(Ε)';
+                const latinPrefix = '(E)';
                 const trimmedName = finalName.trim();
 
                 // Check for either Greek or Latin prefix and strip it
@@ -1987,9 +1986,9 @@
                 
                                 // IMPORTANT: Set reverse mode to false BEFORE restoring state
                                 // This ensures that when restoreRouteState calls updateRouteNameUI,
-                                // the '(A)' prefix is correctly removed.
+                                // the '(E)' prefix is correctly removed.
                                 state.isReverseModeActive = false;
-                
+                                
                                 // Restore the normal route state from its cache
                                 restoreRouteState(state.normalRouteCache);
                                 
@@ -1997,239 +1996,240 @@
                                 state.normalRouteDirty = false; // We are back to the clean normal route
                                 updateToggleButtonsVisualState();
                                 return;
-                            }
-                // --- ACTIVATING ---
-                if (!state.currentRoute || state.pins.length < 2) {
-                    showMessage('Δημιουργήστε μια διαδρομή με τουλάχιστον 2 σημεία για αντιστροφή.', 'error');
-                    return;
-                }
-
-                const activateReverseMode = (mode) => {
-                    state.isReverseModeActive = true;
-                    updateToggleButtonsVisualState();
-
-                    if (mode === 'continue') {
-                        state.normalRouteCache = cloneRouteState();
-                        const routeToRestore = state.reversedRouteCache || state.preloadedReversedData;
-                        restoreRouteState(routeToRestore);
-                        // Consume preloaded data after use
-                        if (state.preloadedReversedData) state.preloadedReversedData = null;
-                        state.normalRouteDirty = false;
-                        return;
-                    }
-
-                    if (mode === 'new') {
-                        state.normalRouteCache = cloneRouteState();
-                        
-                        state.pins.reverse();
-                        
-                        // Re-create pin addresses for the new order
-                        state.pinAddresses = state.pins.map(p => ({ status: 'empty', address: null, lngLat: p }));
-                        
-                        // Manually redraw UI for the new pin order *before* calculating the new route
-                        redrawMarkers();
-                        renderAddressList();
-                        
-                        // Fetch addresses for the newly ordered pins
-                        state.pinAddresses.forEach((_, index) => fetchAddressForPin(index));
-                        
-                        state.isRouteNameUserModified = false;
-                        calculateRoute();
-                        state.normalRouteDirty = false;
-                    }
-                };
-
-                // Conflict check
-                if (state.normalRouteDirty && (state.reversedRouteCache || state.preloadedReversedData)) {
-                    showReverseConflictDialog(choice => {
-                        if (choice === 'new') {
-                            activateReverseMode('new');
-                        } else if (choice === 'continue') {
-                            activateReverseMode('continue');
-                        }
-                        // If 'cancel', do nothing, just toggle the button back
-                        else {
-                            state.isReverseModeActive = false;
-                            updateToggleButtonsVisualState();
-                        }
-                    });
-                } 
-                // No conflict, but cached data exists
-                else if (state.reversedRouteCache || state.preloadedReversedData) {
-                    activateReverseMode('continue');
-                }
-                // No conflict, no cached data
-                else {
-                    activateReverseMode('new');
-                }
-            }
-
-
-            // --- UNDO/HISTORY MANAGEMENT ---
-            function saveState() {
-                // When any change happens that warrants saving, the normal route is now "dirty"
-                if (!state.isReverseModeActive) {
-                    state.normalRouteDirty = true;
-                }
-                
-                if (state.historyIndex < state.history.length - 1) {
-                    state.history = state.history.slice(0, state.historyIndex + 1);
-                }
-
-                const snapshot = {
-                    pins: state.pins.map(p => ({ lat: p.lat, lng: p.lng })),
-                    isRoundTrip: state.isRoundTrip,
-                    showSteepHighlight: state.showSteepHighlight
-                };
-                state.history.push(snapshot);
-                state.historyIndex++;
-
-                if (state.history.length > CONFIG.HISTORY_LIMIT + 1) {
-                    state.history.shift();
-                    state.historyIndex--;
-                }
-                
-                updateUndoButton();
-            }
-
-            function undo() {
-                if (state.historyIndex <= 0) return;
-                state.historyIndex--;
-                const previousState = state.history[state.historyIndex];
-                restoreState(previousState);
-            }
-            
-            function restoreState(snapshot) {
-                // MapTiler uses LngLat object, which is compatible with {lng, lat}
-                state.pins = snapshot.pins.map(p => new maptilersdk.LngLat(p.lng, p.lat));
-                state.pinAddresses = state.pins.map(p => ({ status: 'empty', address: null, lngLat: p }));
-                state.pinAddresses.forEach((_, index) => fetchAddressForPin(index));
-
-                state.isRoundTrip = snapshot.isRoundTrip;
-                state.showSteepHighlight = snapshot.showSteepHighlight ?? false;
-                
-                updateToggleButtonsVisualState();
-                
-                redrawFromState();
-                updateUndoButton();
-                setTimeout(adjustPanelHeightForContent, 50);
-            }
-
-            function redrawFromState() {
-                // Remove existing markers from the map
-                state.markers.forEach(marker => marker.remove());
-                state.markers = [];
-                
-                // Render the address list to reflect changes like reordering or removal
-                renderAddressList();
-
-                // Clear route data from sources
-                if (state.map.isStyleLoaded()) {
-                    const routeSource = state.map.getSource('routeSource');
-                    if (routeSource) routeSource.setData({ type: 'Feature', geometry: null });
-                    
-                    const steepSource = state.map.getSource('steepRouteSource');
-                    if (steepSource) steepSource.setData({ type: 'FeatureCollection', features: [] });
-                }
-                
-                // Re-add markers based on the new state
-                state.pins.forEach((pin, index) => {
-                    addMarker(pin, index + 1);
-                });
-                
-                if (state.pins.length >= 2) {
-                    calculateRoute();
-                } else {
-                    clearRoute(false); // This will also need refactoring
-                }
-                updateUIState();
-                generateDefaultRouteName();
-            }
-            
-            // --- SHARE & URL FUNCTIONALITY ---
-            function generateShareLink() {
-                if (state.pins.length === 0) return null;
-
-                const pinString = state.pins.map(p => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`).join('|');
-                const dataString = `v1|${pinString}|${state.isRoundTrip}|${state.showSteepHighlight}`;
-                const compressed = LZString.compressToEncodedURIComponent(dataString);
-
-                const baseUrl = window.location.href.split('#')[0];
-                return `${baseUrl}#${compressed}`;
-            }
-
-            function copyShareLink() {
-                const link = generateShareLink();
-                if (!link) {
-                    showMessage("Δημιουργήστε μια διαδρομή πρώτα.", 'error');
-                    return;
-                }
-
-                navigator.clipboard.writeText(link).then(() => {
-                    showMessage('Ο σύνδεσμος αντιγράφηκε στο πρόχειρο!', 'success');
-                }).catch(err => {
-                    console.error('Failed to copy link: ', err);
-                    showMessage('Αποτυχία αντιγραφής. Ο σύνδεσμος είναι: ' + link, 'error');
-                });
-            }
-
-            function parseUrlAndRestore() {
-                const hash = window.location.hash.substring(1);
-                if (!hash) return false;
-
-                try {
-                    const decompressed = LZString.decompressFromEncodedURIComponent(hash);
-                    if (!decompressed || !decompressed.startsWith('v1|')) {
-                        console.warn('Invalid or old share link format.');
-                        return false;
-                    }
-
-                    const parts = decompressed.split('|');
-                    parts.shift(); // remove "v1"
-
-                    const showSteepHighlight = parts.pop() === 'true';
-                    const isRoundTrip = parts.pop() === 'true';
-
-                    const pins = parts.map(p => {
-                        const coords = p.split(',');
-                        // Return an object compatible with maptilersdk.LngLat
-                        return { lat: parseFloat(coords[0]), lng: parseFloat(coords[1]) };
-                    });
-
-                    if (pins.length > 0) {
-                        const snapshot = { 
-                            pins: pins, 
-                            isRoundTrip,
-                            showSteepHighlight
-                        };
-                        state.history = [snapshot];
-                        state.historyIndex = 0;
-                        
-                        // Wait for map to be loaded before restoring state
-                        if (state.map.isStyleLoaded()) {
-                            restoreState(snapshot);
-                        } else {
-                            state.map.once('load', () => restoreState(snapshot));
-                        }
-                        
-                        console.log('Route restored from URL.');
-                        return true;
-                    }
-                } catch (e) {
-                    console.error("Failed to parse URL hash:", e);
-                    showMessage("Ο σύνδεσμος της διαδρομής είναι κατεστραμμένος.", 'error');
-                }
-                return false;
-            }
-
-            function generateGpxTrack(trackData, trackType) {
-                if (!trackData || !trackData.currentRoute) return '';
-
-                const pins = trackData.pins.map(p => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`).join('|');
-                let trackName = trackData.routeName || (trackType === 'original' ? 'Normal Route' : 'Reversed Route');
-                if (trackType === 'reversed' && !trackName.startsWith('(A) ')) {
-                    trackName = `(A) ${trackName}`;
-                }
+                                }
+                                
+                                // --- ACTIVATING ---
+                                if (!state.currentRoute || state.pins.length < 2) {
+                                    showMessage('Δημιουργήστε μια διαδρομή με τουλάχιστον 2 σημεία για αντιστροφή.', 'error');
+                                    return;
+                                }
+                                
+                                const activateReverseMode = (mode) => {
+                                    state.isReverseModeActive = true;
+                                    updateToggleButtonsVisualState();
+                                
+                                    if (mode === 'continue') {
+                                        state.normalRouteCache = cloneRouteState();
+                                        const routeToRestore = state.reversedRouteCache || state.preloadedReversedData;
+                                        restoreRouteState(routeToRestore);
+                                        // Consume preloaded data after use
+                                        if (state.preloadedReversedData) state.preloadedReversedData = null;
+                                        state.normalRouteDirty = false;
+                                        return;
+                                    }
+                                
+                                    if (mode === 'new') {
+                                        state.normalRouteCache = cloneRouteState();
+                                        
+                                        state.pins.reverse();
+                                        
+                                        // Re-create pin addresses for the new order
+                                        state.pinAddresses = state.pins.map(p => ({ status: 'empty', address: null, lngLat: p }));
+                                        
+                                        // Manually redraw UI for the new pin order *before* calculating the new route
+                                        redrawMarkers();
+                                        renderAddressList();
+                                        
+                                        // Fetch addresses for the newly ordered pins
+                                        state.pinAddresses.forEach((_, index) => fetchAddressForPin(index));
+                                        
+                                        state.isRouteNameUserModified = false;
+                                        calculateRoute();
+                                        state.normalRouteDirty = false;
+                                    }
+                                };
+                                
+                                // Conflict check
+                                if (state.normalRouteDirty && (state.reversedRouteCache || state.preloadedReversedData)) {
+                                    showReverseConflictDialog(choice => {
+                                        if (choice === 'new') {
+                                            activateReverseMode('new');
+                                        } else if (choice === 'continue') {
+                                            activateReverseMode('continue');
+                                        }
+                                        // If 'cancel', do nothing, just toggle the button back
+                                        else {
+                                            state.isReverseModeActive = false;
+                                            updateToggleButtonsVisualState();
+                                        }
+                                    });
+                                } 
+                                // No conflict, but cached data exists
+                                else if (state.reversedRouteCache || state.preloadedReversedData) {
+                                    activateReverseMode('continue');
+                                }
+                                // No conflict, no cached data
+                                else {
+                                    activateReverseMode('new');
+                                }
+                                }
+                                
+                                
+                                // --- UNDO/HISTORY MANAGEMENT ---
+                                function saveState() {
+                                // When any change happens that warrants saving, the normal route is now "dirty"
+                                if (!state.isReverseModeActive) {
+                                    state.normalRouteDirty = true;
+                                }
+                                
+                                if (state.historyIndex < state.history.length - 1) {
+                                    state.history = state.history.slice(0, state.historyIndex + 1);
+                                }
+                                
+                                const snapshot = {
+                                    pins: state.pins.map(p => ({ lat: p.lat, lng: p.lng })),
+                                    isRoundTrip: state.isRoundTrip,
+                                    showSteepHighlight: state.showSteepHighlight
+                                };
+                                state.history.push(snapshot);
+                                state.historyIndex++;
+                                
+                                if (state.history.length > CONFIG.HISTORY_LIMIT + 1) {
+                                    state.history.shift();
+                                    state.historyIndex--;
+                                }
+                                
+                                updateUndoButton();
+                                }
+                                
+                                function undo() {
+                                if (state.historyIndex <= 0) return;
+                                state.historyIndex--;
+                                const previousState = state.history[state.historyIndex];
+                                restoreState(previousState);
+                                }
+                                
+                                function restoreState(snapshot) {
+                                // MapTiler uses LngLat object, which is compatible with {lng, lat}
+                                state.pins = snapshot.pins.map(p => new maptilersdk.LngLat(p.lng, p.lat));
+                                state.pinAddresses = state.pins.map(p => ({ status: 'empty', address: null, lngLat: p }));
+                                state.pinAddresses.forEach((_, index) => fetchAddressForPin(index));
+                                
+                                state.isRoundTrip = snapshot.isRoundTrip;
+                                state.showSteepHighlight = snapshot.showSteepHighlight ?? false;
+                                
+                                updateToggleButtonsVisualState();
+                                
+                                redrawFromState();
+                                updateUndoButton();
+                                setTimeout(adjustPanelHeightForContent, 50);
+                                }
+                                
+                                function redrawFromState() {
+                                // Remove existing markers from the map
+                                state.markers.forEach(marker => marker.remove());
+                                state.markers = [];
+                                
+                                // Render the address list to reflect changes like reordering or removal
+                                renderAddressList();
+                                
+                                // Clear route data from sources
+                                if (state.map.isStyleLoaded()) {
+                                    const routeSource = state.map.getSource('routeSource');
+                                    if (routeSource) routeSource.setData({ type: 'Feature', geometry: null });
+                                    
+                                    const steepSource = state.map.getSource('steepRouteSource');
+                                    if (steepSource) steepSource.setData({ type: 'FeatureCollection', features: [] });
+                                }
+                                
+                                // Re-add markers based on the new state
+                                state.pins.forEach((pin, index) => {
+                                    addMarker(pin, index + 1);
+                                });
+                                
+                                if (state.pins.length >= 2) {
+                                    calculateRoute();
+                                } else {
+                                    clearRoute(false); // This will also need refactoring
+                                }
+                                updateUIState();
+                                generateDefaultRouteName();
+                                }
+                                
+                                // --- SHARE & URL FUNCTIONALITY ---
+                                function generateShareLink() {
+                                if (state.pins.length === 0) return null;
+                                
+                                const pinString = state.pins.map(p => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`).join('|');
+                                const dataString = `v1|${pinString}|${state.isRoundTrip}|${state.showSteepHighlight}`;
+                                const compressed = LZString.compressToEncodedURIComponent(dataString);
+                                
+                                const baseUrl = window.location.href.split('#')[0];
+                                return `${baseUrl}#${compressed}`;
+                                }
+                                
+                                function copyShareLink() {
+                                const link = generateShareLink();
+                                if (!link) {
+                                    showMessage("Δημιουργήστε μια διαδρομή πρώτα.", 'error');
+                                    return;
+                                }
+                                
+                                navigator.clipboard.writeText(link).then(() => {
+                                    showMessage('Ο σύνδεσμος αντιγράφηκε στο πρόχειρο!', 'success');
+                                }).catch(err => {
+                                    console.error('Failed to copy link: ', err);
+                                    showMessage('Αποτυχία αντιγραφής. Ο σύνδεσμος είναι: ' + link, 'error');
+                                });
+                                }
+                                
+                                function parseUrlAndRestore() {
+                                const hash = window.location.hash.substring(1);
+                                if (!hash) return false;
+                                
+                                try {
+                                    const decompressed = LZString.decompressFromEncodedURIComponent(hash);
+                                    if (!decompressed || !decompressed.startsWith('v1|')) {
+                                        console.warn('Invalid or old share link format.');
+                                        return false;
+                                    }
+                                
+                                    const parts = decompressed.split('|');
+                                    parts.shift(); // remove "v1"
+                                
+                                    const showSteepHighlight = parts.pop() === 'true';
+                                    const isRoundTrip = parts.pop() === 'true';
+                                
+                                    const pins = parts.map(p => {
+                                        const coords = p.split(',');
+                                        // Return an object compatible with maptilersdk.LngLat
+                                        return { lat: parseFloat(coords[0]), lng: parseFloat(coords[1]) };
+                                    });
+                                
+                                    if (pins.length > 0) {
+                                        const snapshot = { 
+                                            pins: pins, 
+                                            isRoundTrip,
+                                            showSteepHighlight
+                                        };
+                                        state.history = [snapshot];
+                                        state.historyIndex = 0;
+                                        
+                                        // Wait for map to be loaded before restoring state
+                                        if (state.map.isStyleLoaded()) {
+                                            restoreState(snapshot);
+                                        } else {
+                                            state.map.once('load', () => restoreState(snapshot));
+                                        }
+                                        
+                                        console.log('Route restored from URL.');
+                                        return true;
+                                    }
+                                } catch (e) {
+                                    console.error("Failed to parse URL hash:", e);
+                                    showMessage("Ο σύνδεσμος της διαδρομής είναι κατεστραμμένος.", 'error');
+                                }
+                                return false;
+                                }
+                                
+                                function generateGpxTrack(trackData, trackType) {
+                                if (!trackData || !trackData.currentRoute) return '';
+                                
+                                const pins = trackData.pins.map(p => `${p.lat.toFixed(5)},${p.lng.toFixed(5)}`).join('|');
+                                let trackName = trackData.routeName || (trackType === 'original' ? 'Normal Route' : 'Reversed Route');
+                                if (trackType === 'reversed' && !trackName.startsWith('(E) ')) {
+                                    trackName = `(E) ${trackName}`;
+                                }
 
                 let track = ` <trk>
 <name>${trackName}</name>
@@ -3525,7 +3525,7 @@
             const undoButton = document.getElementById('undoButton');
             undoButton.disabled = isDisabled;
             if (state.isReverseModeActive) {
-                undoButton.title = "Η αναίρεση είναι απενεργοποιημένη σε λειτουργία αντίστροφης διαδρομής";
+                undoButton.title = "Η αναίρεση είναι απενεργοποιημένη σε λειτουργία διαδρομής επιστροφής";
             } else {
                 undoButton.title = "Αναίρεση";
             }
