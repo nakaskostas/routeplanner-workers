@@ -2000,7 +2000,7 @@
                                 
                                 // --- ACTIVATING ---
                                 if (!state.currentRoute || state.pins.length < 2) {
-                                    showMessage('Δημιουργήστε μια διαδρομή με τουλάχιστον 2 σημεία για αντιστροφή.', 'error');
+                                    showMessage('Δημιουργήστε μια διαδρομή με τουλάχιστον 2 σημεία για εμφάνιση διαδρομής επιστροφής.', 'error');
                                     return;
                                 }
                                 
