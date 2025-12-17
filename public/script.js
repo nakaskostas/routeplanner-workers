@@ -3134,7 +3134,7 @@
                 if (!state.hasUserManuallyClosedBottomPanel) {
                     showBottomPanel();
                 }
-            }
+                updateUIState();            }
                                             // --- UI UPDATES & DISPLAY ---
                                             function showBottomPanel(isUserInitiated = false) {
                                                 if (isUserInitiated) {
