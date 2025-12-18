@@ -1762,7 +1762,6 @@
 
             document.getElementById('reverseRouteToggle').addEventListener('click', handleReverseRouteToggle);
 
-
                         window.addEventListener('resize', () => {
                             if (state.map) {
                                 setTimeout(() => state.map.resize(), 100);
@@ -1854,6 +1853,8 @@
 
                 if (roundTripButton) {
                     roundTripButton.classList.toggle('active', state.isRoundTrip);
+                    roundTripButton.disabled = state.isReverseModeActive;
+                    roundTripButton.title = state.isReverseModeActive ? "Η κυκλική διαδρομή δεν είναι διαθέσιμη σε λειτουργία επιστροφής" : "Κυκλική διαδρομή";
                 }
 
                 if (steepUphillButton) {
@@ -1862,6 +1863,8 @@
 
                 if(reverseRouteButton) {
                     reverseRouteButton.classList.toggle('active', state.isReverseModeActive);
+                    reverseRouteButton.disabled = state.isRoundTrip;
+                    reverseRouteButton.title = state.isRoundTrip ? "Η διαδρομή επιστροφής δεν είναι διαθέσιμη σε κυκλική διαδρομή" : "Διαδρομή επιστροφής";
                 }
             }
 
@@ -2684,6 +2687,7 @@
                 }
                 generateDefaultRouteName();
                 saveState();
+                updateToggleButtonsVisualState();
             }
 
             function handleSteepUphillToggle(e) {
