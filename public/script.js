@@ -72,19 +72,37 @@
 
         // Helper to generate the HTML for the main statistics part of the report.
         function getPdfStatsHtml() {
-            const totalDistance = document.getElementById('totalDistance').textContent;
-            const steepUphillDistance = document.getElementById('steepUphillDistance').textContent;
-            const elevationGain = document.getElementById('elevationGain').textContent;
-            const routeNameDisplay = document.getElementById('routeName').textContent; // Get the displayed text from the DOM
+            const totalDistanceText = document.getElementById('totalDistance').textContent;
+            const steepUphillDistanceText = document.getElementById('steepUphillDistance').textContent;
+            const elevationGain = `+${Math.round(state.currentRoute.stats.elevationGain)} m`;
+            const routeNameDisplay = document.getElementById('routeName').textContent;
             const routeName = (routeNameDisplay && routeNameDisplay !== '--') ? ` "${routeNameDisplay}"` : '';
+
+            // Helper to parse distance text like "1.23 km" or "500 m" into meters
+            const parseDistance = (text) => {
+                if (text.includes('km')) {
+                    return parseFloat(text.replace('km', '').trim()) * 1000;
+                }
+                if (text.includes('m')) {
+                    return parseFloat(text.replace('m', '').trim());
+                }
+                return 0;
+            };
+            
+            const formatDistance = (d) => d > 1000 ? `${(d / 1000).toFixed(2)} km` : `${Math.round(d)} m`;
+
+            const totalDistance = parseDistance(totalDistanceText);
+            const steepUphillDistance = parseDistance(steepUphillDistanceText);
+            const nonSteepDistance = formatDistance(totalDistance - steepUphillDistance);
 
             return `
                 <h1 style="font-size: 24px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; text-align: center;">Αναφορά Διαδρομής${routeName}</h1>
                 <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 10px; text-align: center;">Στατιστικά</h2>
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 16px;">
-                    <tr style="border-bottom: 1px solid #ccc;"><td style="padding: 8px; font-weight: bold;">Συνολική Απόσταση:</td><td style="padding: 8px;">${totalDistance}</td></tr>
-                    <tr style="border-bottom: 1px solid #ccc;"><td style="padding: 8px; font-weight: bold;">Μήκος Απότομης Ανάβασης (>5%):</td><td style="padding: 8px;">${steepUphillDistance}</td></tr>
+                    <tr style="border-bottom: 1px solid #ccc;"><td style="padding: 8px; font-weight: bold;">Συνολική Απόσταση:</td><td style="padding: 8px;">${totalDistanceText}</td></tr>
                     <tr style="border-bottom: 1px solid #ccc;"><td style="padding: 8px; font-weight: bold;">Θετική Υψομετρική:</td><td style="padding: 8px;">${elevationGain}</td></tr>
+                    <tr style="border-bottom: 1px solid #ccc;"><td style="padding: 8px; font-weight: bold;">Μήκος Απότομης Ανάβασης (>5%):</td><td style="padding: 8px;">${steepUphillDistanceText}</td></tr>
+                    <tr style="border-bottom: 1px solid #ccc;"><td style="padding: 8px; font-weight: bold;">Μήκος διαδρομής (&lt;=5%):</td><td style="padding: 8px;">${nonSteepDistance}</td></tr>
                 </table>
             `;
         }
@@ -3244,10 +3262,9 @@
                                             function updateRouteStats(data) {
                                                 const formatDistance = (d) => d > 1000 ? `${(d / 1000).toFixed(2)} km` : `${Math.round(d)} m`;
                                                 
-                                                document.getElementById('totalDistance').textContent = formatDistance(data.distance);
-                                                document.getElementById('steepUphillDistance').textContent = formatDistance(data.steepUphillDistance);
-                                                document.getElementById('elevationGain').textContent = `+${Math.round(data.elevationGain)} m`;
-                                            }
+                                                                document.getElementById('totalDistance').textContent = formatDistance(data.distance);
+                                                                document.getElementById('steepUphillDistance').textContent = formatDistance(data.steepUphillDistance);
+                                                                document.getElementById('nonSteepDistance').textContent = formatDistance(data.distance - data.steepUphillDistance);                                            }
                                             
                                             async function displayElevationChart(elevationData) {
                                                 try {
