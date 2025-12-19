@@ -1,5 +1,24 @@
 
         // --- PDF GENERATION ---
+
+        /**
+         * Sanitizes a string to prevent XSS by escaping HTML characters.
+         * @param {string} str The input string.
+         * @returns {string} The sanitized string.
+         */
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, function(m) {
+                switch (m) {
+                    case '&': return '&amp;';
+                    case '<': return '&lt;';
+                    case '>': return '&gt;';
+                    case '"': return '&quot;';
+                    default: return '&#039;'; // For '
+                }
+            });
+        }
+        
         function generateSteepnessReport(routeCoordinates) {
             if (!routeCoordinates || routeCoordinates.length < 2) {
                 return [];
@@ -75,8 +94,8 @@
             const totalDistanceText = document.getElementById('totalDistance').textContent;
             const steepUphillDistanceText = document.getElementById('steepUphillDistance').textContent;
             const elevationGain = `+${Math.round(state.currentRoute.stats.elevationGain)} m`;
-            const routeNameDisplay = document.getElementById('routeName').textContent;
-            const routeName = (routeNameDisplay && routeNameDisplay !== '--') ? ` "${routeNameDisplay}"` : '';
+            const sanitizedName = escapeHTML(state.routeName);
+            const routeName = (sanitizedName && sanitizedName !== '--') ? ` "${sanitizedName}"` : '';
 
             // Helper to parse distance text like "1.23 km" or "500 m" into meters
             const parseDistance = (text) => {
