@@ -912,10 +912,7 @@
                 return `
                 <div class="address-item flex items-center justify-between gap-3 p-2 rounded-md hover:bg-black/10" data-index="${index}">
                     <div class="flex items-center gap-3 cursor-pointer min-w-0">
-                        <div class="flex-shrink-0 drag-handle-list cursor-move">
-                            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
-                        </div>
-                        <div class="flex-shrink-0">
+                        <div class="flex-shrink-0 drag-handle-pin cursor-move">
                             <div class="${pinClass}">${pinContent}</div>
                         </div>
                         <div class="text-sm font-medium truncate ${isError ? 'text-red-600' : 'text-gray-800'}" title="${addressText}">${addressText}</div>
@@ -1318,7 +1315,7 @@
             const listEl = document.getElementById('addressList');
             new Sortable(listEl, {
                 animation: 150,
-                handle: '.drag-handle-list',
+                handle: '.drag-handle-pin',
                 chosenClass: 'sortable-chosen',
                 onEnd: function (evt) {
                     const { oldIndex, newIndex } = evt;
